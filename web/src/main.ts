@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import "./seite.js";
 import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
-import { FELDER, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -282,7 +282,17 @@ function baueMaske(): void {
         } else if (abschnitt.nummer === 2) {
             (eingabe(behaelter, "auftrag", "Erhaltener Auftrag", "textarea") as HTMLTextAreaElement).rows = 3;
         } else {
-            (eingabe(behaelter, "fuehrung", "Eine Leerzeile beginnt eine neue Zeile im Vordruck", "textarea") as HTMLTextAreaElement).rows = 2;
+            // Eine Eingabe je Formularzeile; der Text dazu steht verborgen in „fuehrung“.
+            const verborgen = document.createElement("input");
+            verborgen.type = "hidden";
+            verborgen.name = "fuehrung";
+            behaelter.appendChild(verborgen);
+            const liste = document.createElement("div");
+            liste.id = "fuehrung-zeilen";
+            behaelter.appendChild(liste);
+            const weitere = knopf("Weitere Zeile", "fuehrung-weitere", "Weitere Zeile in Abschnitt 5 hinzufügen");
+            weitere.classList.add("weitere-zeile");
+            behaelter.appendChild(weitere);
         }
     }
 
@@ -309,6 +319,30 @@ function knopf(text: string, id: string, beschreibung: string): HTMLButtonElemen
     return neu;
 }
 
+/** Die Eingaben von Abschnitt 5, mindestens zwei wie im Vordruck, oder `anzahl`. */
+function fuehrungFelder(zeilen: readonly string[], anzahl = Math.max(2, zeilen.length)): void {
+    const liste = el("fuehrung-zeilen");
+    liste.replaceChildren(...Array.from({ length: anzahl }, (_, index) => {
+        const label = document.createElement("label");
+        label.className = "feld";
+        label.appendChild(Object.assign(document.createElement("span"), { textContent: `Zeile ${index + 1}` }));
+        const feldElement = document.createElement("textarea");
+        feldElement.rows = 1;
+        feldElement.className = "fuehrung-zeile";
+        feldElement.value = zeilen[index] ?? "";
+        label.appendChild(feldElement);
+        return label;
+    }));
+    for (const feldElement of liste.querySelectorAll("textarea")) {
+        anpassen(feldElement);
+    }
+}
+
+function fuehrungAusFeldern(): void {
+    const felder = [...el("fuehrung-zeilen").querySelectorAll<HTMLTextAreaElement>("textarea")];
+    (maske.elements.namedItem("fuehrung") as HTMLInputElement).value = fuehrungText(felder.map(feldElement => feldElement.value));
+}
+
 function steuerelemente(): (HTMLInputElement | HTMLTextAreaElement)[] {
     return FELDER.map(eintrag => maske.elements.namedItem(eintrag.schluessel) as HTMLInputElement | HTMLTextAreaElement);
 }
@@ -330,6 +364,7 @@ function setzeWerte(werte: Werte): void {
             anpassen(steuer);
         }
     }
+    fuehrungFelder(fuehrungZeilen(werte.fuehrung ?? ""));
     geaendert();
 }
 
@@ -356,6 +391,9 @@ function geaendert(): void {
 maske.addEventListener("input", ereignis => {
     if (ereignis.target instanceof HTMLTextAreaElement) {
         anpassen(ereignis.target);
+        if (ereignis.target.classList.contains("fuehrung-zeile")) {
+            fuehrungAusFeldern();
+        }
     }
     geaendert();
 });
@@ -459,6 +497,10 @@ maske.addEventListener("click", ereignis => {
         const ort = steuer.value.replace(/,?\s*\d{1,2}\.\d{1,2}\.(\d{2,4})?\s*$/, "").trim();
         steuer.value = ort ? `${ort}, ${heute()}` : heute();
         geaendert();
+    } else if (ziel.id === "fuehrung-weitere") {
+        const felder = [...el("fuehrung-zeilen").querySelectorAll<HTMLTextAreaElement>("textarea")];
+        fuehrungFelder(felder.map(feldElement => feldElement.value), felder.length + 1);
+        el("fuehrung-zeilen").querySelector<HTMLTextAreaElement>("label:last-child textarea")?.focus();
     } else if (ziel.id === "jetzt") {
         (maske.elements.namedItem("abgesandtAm") as HTMLInputElement).value = heute();
         (maske.elements.namedItem("abgesandtUm") as HTMLInputElement).value = uhrzeit();
@@ -638,6 +680,7 @@ el("tabelle-pdf").addEventListener("click", () => {
 // ---- Start ------------------------------------------------------------------------
 
 baueMaske();
+fuehrungFelder([]);
 zeigeEinstellungen();
 const entwurf = lies<{ werte: Werte; zeit: number }>(ENTWURF);
 if (entwurf?.werte && hatInhalt(entwurf.werte)) {

@@ -72,7 +72,7 @@ export const FELDER: readonly Feld[] = [
     {
         schluessel: "fuehrung",
         titel: "5 Führung und Verbindung",
-        beschreibung: "5. Führung und Verbindung: Telekommunikationsverbindungen und Meldewesen, Führungsstellen, Einsatzleitungen, Platz des Führers. Zeilenumbrüche bleiben erhalten; eine Leerzeile in der Zelle beginnt eine neue Zeile im Vordruck.",
+        beschreibung: "5. Führung und Verbindung: Telekommunikationsverbindungen und Meldewesen, Führungsstellen, Einsatzleitungen, Platz des Führers. Zeilenumbrüche bleiben erhalten; eine Leerzeile in der Zelle beginnt eine neue Zeile im Vordruck. Gleich benannte weitere Spalten ergeben ebenfalls je eine Zeile.",
         beispiel: "TMO-Gruppe 304_OL_THW, Rufname Heros Oldenburg 21/10\n\nEA Deich Süd, Gemeindehaus Tungeln",
         auch: ["Führung und Verbindung", "Führung"],
         mehrzeilig: true,
@@ -106,6 +106,20 @@ export function zuDaten(werte: Werte): EinsatzauftragDaten {
         abgesandtUm: wert("abgesandtUm"),
         abgesandtVon: wert("abgesandtVon")
     };
+}
+
+/**
+ * Abschnitt 5 als einzelne Formularzeilen: Im gespeicherten Text trennt eine
+ * Leerzeile die Zeilen, so wie die Bibliothek ihn setzt.
+ */
+export function fuehrungZeilen(text: string): string[] {
+    return text.replace(/\r\n?/g, "\n").split(/\n[ \t]*\n/).map(zeile => zeile.replace(/^\s*\n|\n\s*$/g, "").trimEnd()).filter(zeile => zeile.trim() !== "");
+}
+
+/** Umkehrung von `fuehrungZeilen`. Leerzeilen innerhalb einer Zeile fallen weg, damit sie eine Zeile bleibt. */
+export function fuehrungText(zeilen: readonly string[]): string {
+    return zeilen.map(zeile => zeile.replace(/\r\n?/g, "\n").replace(/\n[ \t]*(?=\n)/g, "").replace(/^\n+|\n+$/g, "").trimEnd())
+        .filter(zeile => zeile.trim() !== "").join("\n\n");
 }
 
 /** Ob irgendein Feld etwas enthält. */
@@ -185,7 +199,9 @@ export function leseTabelle(tabelle: readonly (readonly string[])[]): Tabelle {
             const text = zelle.replace(/\r\n?/g, "\n").trim();
             if (schluessel && text) {
                 // Doppelte Spalten: Inhalte zusammenfügen statt still zu überschreiben.
-                werte[schluessel] = werte[schluessel] ? `${werte[schluessel]}\n${text}` : text;
+                // Mehrere Spalten „5 …“ ergeben je eine Formularzeile.
+                const trenner = schluessel === "fuehrung" ? "\n\n" : "\n";
+                werte[schluessel] = werte[schluessel] ? `${werte[schluessel]}${trenner}${text}` : text;
             }
         });
         if (hatInhalt(werte)) {

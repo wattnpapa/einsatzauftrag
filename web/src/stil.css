@@ -821,3 +821,4 @@ h1 { overflow-wrap: anywhere; }
 .knopf-label:focus-within { outline: var(--fokus) solid var(--akzent); outline-offset: 2px; }
 
 table.uebersicht td.mehrseitig { font-weight: 700; color: var(--warn-text); background: var(--warn-fond); }
+.weitere-zeile { margin-top: var(--r-3); }

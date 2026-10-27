@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UNTERPUNKTE } from "../../src/index.js";
-import { FELDER, feldZuKopf, hatInhalt, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
+import { FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
 
 describe("FELDER", () => {
     it("hat jedes Feld genau einmal, alle Unterpunkte eingeschlossen", () => {
@@ -50,7 +50,7 @@ describe("leseTabelle", () => {
 
     it("fügt doppelte Spalten zusammen", () => {
         const tabelle = leseTabelle([["5 Führung und Verbindung", "Führung"], ["Funk", "EA Süd"]]);
-        expect(tabelle.zeilen[0]?.werte.fuehrung).toBe("Funk\nEA Süd");
+        expect(tabelle.zeilen[0]?.werte.fuehrung).toBe("Funk\n\nEA Süd");
     });
 
     it("meldet eine Tabelle ohne bekannte Spalte", () => {
@@ -78,5 +78,18 @@ describe("zuDaten", () => {
         expect(hatInhalt({})).toBe(false);
         expect(hatInhalt({ auftrag: "  " })).toBe(false);
         expect(hatInhalt({ "4g": "Handkasse" })).toBe(true);
+    });
+});
+
+describe("Abschnitt 5 als Zeilen", () => {
+    it("teilt an Leerzeilen und fügt wieder zusammen", () => {
+        expect(fuehrungZeilen("A\nB\n\n\nC\n \n")).toEqual(["A\nB", "C"]);
+        expect(fuehrungZeilen("")).toEqual([]);
+        expect(fuehrungText(["A\nB", "", "C"])).toBe("A\nB\n\nC");
+    });
+
+    it("hält eine Eingabe mit Leerzeilen als eine Zeile", () => {
+        const text = fuehrungText(["Erreichbarkeiten:\n\nFüSt Rostock\n", "Führungsstelle"]);
+        expect(fuehrungZeilen(text)).toEqual(["Erreichbarkeiten:\nFüSt Rostock", "Führungsstelle"]);
     });
 });
