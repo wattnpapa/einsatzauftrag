@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Einsatzauftrag als PDF ausfüllen – Fb Fü 3</title>
+  <meta name="description" content="Einsatzauftrag (Fb Fü 3) am Bildschirm ausfüllen oder viele aus einer Excel- bzw. CSV-Tabelle erzeugen und als PDF herunterladen. Läuft komplett im Browser." />
+  <meta name="theme-color" content="#12275e" />
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    /* Grundfarbe, bevor das Stylesheet geladen ist: nachts kein heller Blitz. */
+    html { background: #f3f5f9; }
+    html.dunkel-modus { background: #0f1116; color: #e7eaf1; }
+    html.nacht-modus { background: #0d0c08; color: #d9cdb6; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <script>
+    // Anzeigemodus vor dem ersten Malen anwenden, sonst blitzt die Seite nachts erst hell auf.
+    try {
+      var eaModus = localStorage.getItem("ea.anzeigemodus.v1");
+      if (!eaModus && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+        eaModus = "dunkel";
+      if (eaModus === "feld" || eaModus === "nacht" || eaModus === "dunkel")
+        document.documentElement.classList.add(eaModus + "-modus");
+      if (eaModus === "nacht" || eaModus === "dunkel")
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", eaModus === "nacht" ? "#221f16" : "#0f1116");
+    } catch (e) { /* Privatmodus: Standard-Darstellung */ }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <button type="button" class="sprungmarke" id="sprungmarke">Zum Inhalt springen</button>
+
+    <header class="seiten-kopf">
+      <div class="kopf-inhalt">
+        <div class="titelzeile">
+          <h1>Einsatzauftrag</h1>
+          <div class="anzeige-schalter" role="group" aria-label="Anzeige">
+            <button type="button" data-modus="standard" title="Normale, helle Darstellung">Standard</button>
+            <button type="button" data-modus="feld" title="Große Tippziele und hoher Kontrast für draußen">Feld</button>
+            <button type="button" data-modus="dunkel" title="Heller Text auf dunklem Grund">Dunkel</button>
+            <button type="button" data-modus="nacht" title="Gedimmte, warme Darstellung für Nachteinsätze">Nacht</button>
+          </div>
+        </div>
+        <p class="modus-erklaerung" id="modus-erklaerung" aria-live="polite"></p>
+        <nav class="reiter" role="tablist" aria-label="Arbeitsweise">
+          <button type="button" role="tab" id="reiter-einzeln" aria-controls="ansicht-einzeln" aria-selected="true">Einzeln<span class="lang"> ausfüllen</span></button>
+          <button type="button" role="tab" id="reiter-tabelle" aria-controls="ansicht-tabelle" aria-selected="false" tabindex="-1"><span class="lang">Aus Excel oder CSV</span><span class="kurz">Aus Tabelle</span></button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="inhalt" tabindex="-1">
+      <p class="einleitung">Einsatzauftrag nach dem Vordruck Fb Fü 3 als PDF: einen am Bildschirm ausfüllen oder viele auf einmal aus einer Tabelle erzeugen. Er wird möglichst auf eine A4-Seite gesetzt.</p>
+      <p class="offline-badge">✓ Läuft komplett im Browser. Texte und Tabellen verlassen dieses Gerät nicht.<span id="offline-stand" hidden> Startet nach dem ersten Aufruf auch ohne Netz.</span></p>
+      <p class="warnung" id="speicher-warnung" role="alert" hidden></p>
+
+      <details class="karte einstellungen" id="einstellungen">
+        <summary><span>Kopf und Schrift</span> <span class="stand" id="einstellungen-stand"></span></summary>
+        <div class="zeile">
+          <label class="feld schmal">Kennung (links)
+            <input name="kennung" id="kennung" placeholder="Fb Fü 3" />
+          </label>
+          <label class="feld">Organisation (rechts, eine oder zwei Zeilen)
+            <textarea name="organisation" id="organisation" rows="2" placeholder="Technisches&#10;Hilfswerk"></textarea>
+          </label>
+        </div>
+        <div class="zeile">
+          <div class="feld logo-feld">
+            <span class="beschriftung">Logo (rechts im Kopf)</span>
+            <p class="hinweis" id="logo-stand">Kein Logo. Ein eigenes Bild (PNG, JPEG, SVG) bleibt nur auf diesem Gerät.</p>
+            <div class="aktionen">
+              <label class="datei-knopf knopf-label">Bild wählen…<input type="file" id="logo-datei" class="nur-sr" accept="image/*" /></label>
+              <button type="button" id="logo-entfernen" hidden>Logo entfernen</button>
+            </div>
+          </div>
+          <fieldset class="wahl">
+            <legend>Schrift der Eintragungen</legend>
+            <label class="inline"><input type="radio" name="schrift" value="auto" checked /> Automatisch: 10 bis 8 pt, möglichst eine Seite</label>
+            <label class="inline"><input type="radio" name="schrift" value="10" /> Immer 10 pt</label>
+          </fieldset>
+        </div>
+        <p class="hinweis">Gilt für Einzelaufträge und Tabellen. Die Kennung „Fb Fü 3“ und „Technisches Hilfswerk“ stehen, wenn die Felder leer bleiben.</p>
+      </details>
+
+      <!-- ============================ Einzeln ============================ -->
+      <section id="ansicht-einzeln" role="tabpanel" aria-labelledby="reiter-einzeln" class="ansicht">
+        <div class="arbeitsflaeche">
+          <form id="maske" class="maske" autocomplete="off">
+            <div id="maske-felder"></div>
+            <div class="sprungleiste">
+              <button type="button" class="primaer" id="zur-vorschau">Prüfen und herunterladen ↓</button>
+            </div>
+          </form>
+
+          <section class="karte vorschau" aria-labelledby="vorschau-titel" id="vorschau">
+            <div class="kopfzeile">
+              <h3 id="vorschau-titel">Vorschau</h3>
+              <span class="nebentext" id="vorschau-stand" role="status"></span>
+            </div>
+            <div class="seiten" id="vorschau-seiten"></div>
+            <p class="nebentext nur-dunkel">Die Vorschau ist hier abgedunkelt; die PDF ist ein helles weißes Blatt.</p>
+          </section>
+
+          <div class="abschluss" id="abschluss">
+            <div class="warnung" id="seiten-hinweis" hidden></div>
+            <div class="aktionen">
+              <button type="button" class="primaer" id="einzeln-pdf">PDF herunterladen</button>
+              <button type="button" id="einzeln-drucken">Drucken</button>
+              <button type="button" id="einzeln-naechster">Nächster Auftrag</button>
+              <button type="button" class="abgesetzt" id="einzeln-leeren">Felder leeren</button>
+            </div>
+            <p class="hinweis">„Nächster Auftrag“ behält Absender, Einsatz, Lage, Logistik, Führung und Verbindung sowie die Unterschriftszeile, leert Empfänger, Auftrag, Durchführung und „Abgesandt“ und zählt die lfd. Nr. hoch.</p>
+            <p class="nebentext" id="entwurf-stand"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ Tabelle ============================ -->
+      <section id="ansicht-tabelle" role="tabpanel" aria-labelledby="reiter-tabelle" class="ansicht" hidden>
+        <div class="karten-paar">
+          <section class="karte">
+            <h3>1. Vorlage holen</h3>
+            <p class="nebentext">Eine Zeile je Einsatzauftrag, eine Spalte je Feld des Vordrucks. Die Excel-Vorlage hat ein Blatt „Beispiel“ und eine Anleitung mit allen Spalten. Zeilenumbrüche in einer Zelle (Alt+Eingabe) bleiben im Vordruck erhalten.</p>
+            <div class="aktionen">
+              <button type="button" id="vorlage-xlsx">Excel-Vorlage (.xlsx)</button>
+              <button type="button" id="vorlage-csv">CSV-Vorlage</button>
+            </div>
+          </section>
+          <section class="karte">
+            <h3>2. Ausgefüllte Datei einlesen</h3>
+            <p class="nebentext">Excel (.xlsx) oder CSV mit Semikolon, Komma oder Tabulator. Die Spalten werden am Kopf erkannt, die Reihenfolge ist egal.</p>
+            <label class="datei-ziel" id="datei-ziel">
+              <input type="file" id="datei" class="nur-sr" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" />
+              <span class="datei-knopf primaer" aria-hidden="true">Datei auswählen…</span>
+              <span class="nebentext">oder hierher ziehen</span>
+            </label>
+            <p class="fehler" id="tabelle-fehler" role="alert" hidden></p>
+          </section>
+        </div>
+
+        <section class="karte ergebnis" id="ergebnis" hidden aria-live="polite">
+          <h3>3. Prüfen und herunterladen</h3>
+          <p id="ergebnis-zusammenfassung"></p>
+          <div class="warnung" id="ergebnis-warnung" hidden></div>
+          <div class="aktionen">
+            <button type="button" class="primaer" id="tabelle-pdf">PDF herunterladen</button>
+          </div>
+          <div class="tabellen-scroll">
+            <table class="uebersicht" id="ergebnis-tabelle">
+              <thead><tr><th>Zeile</th><th>Lfd. Nr.</th><th>Empfänger</th><th>Auftrag</th><th>Seiten</th><th><span class="nur-sr">Aktion</span></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div class="kurzmeldung" id="kurzmeldung" role="status" hidden>
+      <span id="kurzmeldung-text"></span>
+      <span class="kurzmeldung-knoepfe">
+        <button type="button" id="kurzmeldung-rueckgaengig">Zurücknehmen</button>
+        <button type="button" id="kurzmeldung-schliessen" aria-label="Meldung schließen">OK</button>
+      </span>
+    </div>
+
+    <footer class="seite">
+      <div class="fuss-gruppen">
+        <div class="fuss-gruppe">
+          <span class="fuss-titel">Projekt</span>
+          <a href="https://github.com/wattnpapa/einsatzauftrag">Quellcode</a>
+          <a href="https://github.com/wattnpapa/einsatzauftrag/issues">Fehler melden</a>
+          <a href="https://github.com/wattnpapa/einsatzauftrag#readme">Als Bibliothek einbinden</a>
+        </div>
+        <div class="fuss-gruppe">
+          <span class="fuss-titel">Rechtliches</span>
+          <a href="./impressum.html">Impressum</a>
+          <a href="./datenschutz.html">Datenschutz</a>
+        </div>
+      </div>
+      <p class="fuss-marke">Lizenz EUPL-1.2. Ohne Anmeldung, ohne Speicherung auf einem Server. Kein amtliches Angebot des THW. <span id="fassung"></span></p>
+      <nav class="werkzeuge" aria-label="Weitere Werkzeuge">
+        <a href="https://erfassungsbogen.app/" rel="noopener" title="Externe Seite">erfassungsbogen.app</a><span aria-hidden="true">·</span>
+        <a href="https://fmbauplaner.app/" rel="noopener" title="Externe Seite">fmbauplaner.app</a><span aria-hidden="true">·</span>
+        <a href="https://nachrichtenvordruck.app/" rel="noopener" title="Externe Seite">nachrichtenvordruck.app</a><span aria-hidden="true">·</span>
+        <a href="https://sprechfunk-uebung.de/" rel="noopener" title="Externe Seite">sprechfunk-uebung.de</a>
+      </nav>
+    </footer>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

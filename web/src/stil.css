@@ -792,3 +792,32 @@ h1 { overflow-wrap: anywhere; }
 /* Nach der Speicherwarnung: die Kurzmeldung oben liegt darunter, nicht darüber. */
 .kurzmeldung.oben { top: calc(var(--warnhoehe, 0px) + var(--r-2)); }
 @media (max-height: 30rem) { #speicher-warnung { font-size: 0.8rem; padding-block: 2px; } }
+
+/* ===============================================================
+   Einsatzauftrag
+   =============================================================== */
+/* Vorschau: Seiten als SVG untereinander, jede ein weißes A4-Blatt. */
+.vorschau .seiten { display: grid; gap: var(--r-3); margin-top: var(--r-2); padding: var(--r-3); background: var(--vorschau-fond); }
+.vorschau .seitenbild { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); }
+@media (min-width: 64rem) {
+  .vorschau .seiten { max-height: calc(100vh - 8rem); overflow-y: auto; }
+}
+.dunkel-modus .vorschau .seitenbild { filter: invert(0.9) hue-rotate(180deg); }
+.nacht-modus .vorschau .seitenbild { filter: invert(0.92) sepia(0.7) brightness(0.75); }
+.nur-dunkel.nebentext { display: none; }
+.dunkel-modus .nur-dunkel.nebentext, .nacht-modus .nur-dunkel.nebentext { display: block; margin-top: var(--r-2); }
+
+/* Mehrzeilige Felder wachsen mit dem Text; die Handgröße bleibt möglich. */
+.maske textarea { min-height: calc(var(--ziel-basis) + var(--ziel)); overflow-y: hidden; }
+.maske .karte > label.feld:first-of-type { margin-top: var(--r-2); }
+.abschnitt-hinweis { margin-top: 0; }
+.zeile > button { margin-top: var(--r-3); }
+
+/* Logo: Dateiwahl als Knopf. */
+.logo-feld { flex: 1 1 16rem; margin-top: var(--r-3); }
+.logo-feld .beschriftung { display: block; font-size: var(--t-xs); font-weight: 600; color: var(--text-2); }
+.logo-feld .aktionen { margin-top: var(--r-2); }
+.knopf-label { cursor: pointer; }
+.knopf-label:focus-within { outline: var(--fokus) solid var(--akzent); outline-offset: 2px; }
+
+table.uebersicht td.mehrseitig { font-weight: 700; color: var(--warn-text); background: var(--warn-fond); }

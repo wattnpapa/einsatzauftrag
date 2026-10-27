@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Impressum – Einsatzauftrag</title>
+  <meta name="description" content="Impressum des Einsatzauftrags: Anbieter und Kontakt." />
+  <meta name="theme-color" content="#12275e" />
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    /* Grundfarbe, bevor das Stylesheet geladen ist: nachts kein heller Blitz. */
+    html { background: #f3f5f9; }
+    html.dunkel-modus { background: #0f1116; color: #e7eaf1; }
+    html.nacht-modus { background: #0d0c08; color: #d9cdb6; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <script>
+    // Anzeigemodus vor dem ersten Malen anwenden, sonst blitzt die Seite
+    // nachts erst hell auf. Gleiche Regel wie anzeige.ts: gespeicherte Wahl
+    // geht vor, ohne Wahl entscheidet die Systemeinstellung (dunkel → Dunkel).
+    try {
+      var eaModus = localStorage.getItem("ea.anzeigemodus.v1");
+      if (!eaModus && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+        eaModus = "dunkel";
+      if (eaModus === "feld" || eaModus === "nacht" || eaModus === "dunkel")
+        document.documentElement.classList.add(eaModus + "-modus");
+      if (eaModus === "nacht")
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#221f16");
+    } catch (e) { /* Privatmodus: Standard-Darstellung */ }
+  </script>
+</head>
+<body>
+  <div id="app" class="textseite">
+    <button type="button" class="sprungmarke" id="sprungmarke">Zum Inhalt springen</button>
+
+    <header class="seiten-kopf">
+      <div class="kopf-inhalt">
+        <div class="titelzeile">
+          <a class="zur-app" href="./">‹ Zur App</a>
+          <div class="anzeige-schalter" role="group" aria-label="Anzeige">
+            <button type="button" data-modus="standard" title="Normale, helle Darstellung">Standard</button>
+            <button type="button" data-modus="dunkel" title="Heller Text auf dunklem Grund">Dunkel</button>
+            <button type="button" data-modus="feld" title="Große Tippziele und hoher Kontrast für draußen">Feld</button>
+            <button type="button" data-modus="nacht" title="Gedimmte, warme Darstellung für Nachteinsätze">Nacht</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="inhalt" tabindex="-1" class="rechtstext">
+      <h1>Impressum</h1>
+
+      <h2>Angaben gemäß § 5 DDG</h2>
+      <p>Johannes Rudolph<br />
+        Kniphauser Straße 16<br />
+        26419 Schortens<br />
+        Deutschland</p>
+
+      <h2>Kontakt</h2>
+      <p>E-Mail: <a href="mailto:johannes.rudolph@thw-oldenburg.de">johannes.rudolph@thw-oldenburg.de</a></p>
+
+      <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+      <p>Johannes Rudolph, Anschrift wie oben.</p>
+
+      <h2>Zum Angebot</h2>
+      <p>Der Einsatzauftrag ist ein privates, nicht gewerbliches Projekt und steht als freie Software unter der
+        <a href="https://github.com/wattnpapa/einsatzauftrag/blob/main/LICENSE">EUPL-1.2</a>.
+        Der Quellcode liegt auf <a href="https://github.com/wattnpapa/einsatzauftrag">GitHub</a>.
+        Es ist kein amtliches Angebot der Bundesanstalt Technisches Hilfswerk. Der Vordruck folgt dem Muster
+        „Fb Fü 3 Einsatzauftrag“, wie es in der Führung im THW verwendet wird.</p>
+
+      <h2>Haftung für Links</h2>
+      <p>Für die Inhalte verlinkter externer Seiten sind deren Betreiber verantwortlich. Zum Zeitpunkt der Verlinkung
+        waren dort keine Rechtsverstöße erkennbar.</p>
+    </main>
+
+    <footer class="seite">
+      <div class="fuss-gruppen">
+        <div class="fuss-gruppe">
+          <span class="fuss-titel">Projekt</span>
+          <a href="https://github.com/wattnpapa/einsatzauftrag">Quellcode</a>
+          <a href="https://github.com/wattnpapa/einsatzauftrag/issues">Fehler melden</a>
+          <a href="https://github.com/wattnpapa/einsatzauftrag#readme">Als Bibliothek einbinden</a>
+        </div>
+        <div class="fuss-gruppe">
+          <span class="fuss-titel">Rechtliches</span>
+          <a href="./impressum.html">Impressum</a>
+          <a href="./datenschutz.html">Datenschutz</a>
+        </div>
+      </div>
+      <p class="fuss-marke">Lizenz EUPL-1.2. Ohne Anmeldung, ohne Speicherung auf einem Server.</p>
+      <nav class="werkzeuge" aria-label="Weitere Werkzeuge">
+        <a href="https://erfassungsbogen.app/">erfassungsbogen.app</a><span aria-hidden="true">·</span>
+        <a href="https://fmbauplaner.app/">fmbauplaner.app</a><span aria-hidden="true">·</span>
+        <a href="https://nachrichtenvordruck.app/">nachrichtenvordruck.app</a><span aria-hidden="true">·</span>
+        <a href="https://sprechfunk-uebung.de/">sprechfunk-uebung.de</a>
+      </nav>
+    </footer>
+  </div>
+  <script type="module" src="./src/seite.ts"></script>
+</body>
+</html>

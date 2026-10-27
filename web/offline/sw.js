@@ -12,7 +12,7 @@
 const VERSION = "__VERSION__";
 const FASSUNG = "__FASSUNG__";
 const DATEIEN = __DATEIEN__;
-const SPEICHER = `bnv-${VERSION}`;
+const SPEICHER = `ea-${VERSION}`;
 const NETZ_WARTEN_MS = 3000;
 // Steht erst im Speicher, wenn alle Dateien darin sind. Ein halb gefüllter
 // Speicher aus einem gescheiterten Einrichten gilt nie als vorige Fassung.
@@ -37,7 +37,7 @@ self.addEventListener("activate", ereignis => {
     // Die aktuelle und die letzte vollständige vorige Fassung bleiben, alles andere fällt weg.
     ereignis.waitUntil(caches.keys()
         .then(namen => Promise.all(namen
-            .filter(name => name.startsWith("bnv-") && name !== SPEICHER)
+            .filter(name => name.startsWith("ea-") && name !== SPEICHER)
             .map(name => caches.open(name)
                 .then(speicher => speicher.match(VOLLSTAENDIG))
                 .then(marke => ({ name, vollstaendig: Boolean(marke) })))))
