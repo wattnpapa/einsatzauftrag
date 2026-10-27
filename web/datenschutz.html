@@ -28,6 +28,19 @@
         document.querySelector('meta[name="theme-color"]').setAttribute("content", "#221f16");
     } catch (e) { /* Privatmodus: Standard-Darstellung */ }
   </script>
+  <!-- Reichweitenmessung, siehe datenschutz.html Punkt 5. Widerspruch über
+       localStorage „skipgc“, den count.js selbst auswertet. -->
+  <script>
+    // Erst nach dem Laden einbinden: Antwortet gc.zgo.at nicht, dreht sonst
+    // die Ladeanzeige des Browsers weiter, obwohl die Seite längst bereit ist.
+    addEventListener("load", function () {
+      var zaehler = document.createElement("script");
+      zaehler.async = true;
+      zaehler.src = "https://gc.zgo.at/count.js";
+      zaehler.setAttribute("data-goatcounter", "https://einsatzauftrag.goatcounter.com/count");
+      document.head.appendChild(zaehler);
+    });
+  </script>
 </head>
 <body>
   <div id="app" class="textseite">
@@ -62,8 +75,8 @@
         Verbindungsdaten wie die IP-Adresse in Server-Logs, um den Dienst bereitzustellen und abzusichern. Rechtsgrundlage
         ist Art. 6 Abs. 1 lit. f DSGVO. Einzelheiten stehen im
         <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</p>
-      <p>Die Seite lädt keine Inhalte von anderen Servern nach. Die Schrift ist Teil der Seite selbst, es gibt keine
-        Werbung, keine Reichweitenmessung und keine weiteren eingebundenen Dienste.</p>
+      <p>Außer dem Zählskript aus Punkt 5 lädt die Seite keine Inhalte von anderen Servern nach. Die Schrift ist Teil
+        der Seite selbst, es gibt keine Werbung und keine weiteren eingebundenen Dienste.</p>
 
       <h2>3. Eingaben, Tabellen und PDF</h2>
       <p>Alles, was du in die Eingabemaske schreibst, verarbeitet die Seite ausschließlich in deinem Browser. Das gilt
@@ -75,7 +88,8 @@
         ab: den gewählten Anzeigemodus, die Einstellungen für Kopf und Schrift (Kennung, Organisation, Schriftgröße),
         ein selbst gewähltes Logo und den Entwurf der Eingabemaske mit dem Zeitpunkt der letzten Änderung, damit ein
         angefangener Auftrag nach einem Neuladen nicht verloren ist. Der Entwurf enthält den Text, den du eingegeben
-        hast. Eingelesene Tabellen werden nicht gespeichert.</p>
+        hast. Hast du der Reichweitenmessung widersprochen, steht dort außerdem ein Vermerk dazu. Eingelesene
+        Tabellen werden nicht gespeichert.</p>
       <p>Damit die Seite auch ohne Netz startet, legt der Browser ihre eigenen Dateien (Seiten, Programmcode, Schrift,
         Symbol) im Cache-Speicher ab. Eingaben und Tabellen gehören nicht dazu.</p>
       <p>Die Einträge dienen allein dem Dienst, den du aufrufst (§ 25 Abs. 2 Nr. 2 TDDDG), und verlassen das Gerät
@@ -83,21 +97,35 @@
         Websitedaten in den Einstellungen deines Browsers. In einem privaten Fenster verwirft der Browser sie beim
         Schließen von selbst.</p>
 
-      <h2>5. Eigene Verantwortung beim Einsatz</h2>
+      <h2>5. Reichweitenmessung</h2>
+      <p>Zur Reichweitenmessung wird <a href="https://www.goatcounter.com/">GoatCounter</a> eingesetzt. Beim Aufruf
+        einer Seite lädt der Browser ein Zählskript von gc.zgo.at und sendet einen Zählimpuls. Übertragen werden dabei
+        die aufgerufene Seite (etwa „/“ oder „/datenschutz.html“), ihr Titel, die verweisende Seite und die
+        Bildschirmbreite; aus der Verbindung ergeben sich zusätzlich Browser, Betriebssystem und Land. Die IP-Adresse
+        dient nur dazu, wiederholte Aufrufe innerhalb eines Tages zu erkennen, und wird nicht gespeichert. Es werden
+        keine Cookies gesetzt und keine geräteübergreifende Kennung gebildet. Was du in die Maske schreibst oder aus
+        einer Tabelle einliest, wird nicht übertragen.</p>
+      <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Das berechtigte Interesse besteht darin zu sehen, ob und wie
+        das Angebot genutzt wird, um es bedarfsgerecht weiterzuentwickeln. Du kannst der Messung nach Art. 21 DSGVO
+        widersprechen, indem du hier das Kästchen setzt. Der Browser merkt sich das im lokalen Speicher, danach sendet
+        die Seite auf diesem Gerät keinen Zählimpuls mehr.</p>
+      <p><label class="inline"><input type="checkbox" id="nicht-zaehlen" /> Nicht mitzählen</label></p>
+
+      <h2>6. Eigene Verantwortung beim Einsatz</h2>
       <p>Einsatzaufträge können personenbezogene Daten enthalten, etwa Namen von Einsatzkräften oder Anschriften von Einsatzstellen.
         Weil der Entwurf im Browser stehen bleibt, solltest du ihn auf gemeinsam genutzten Geräten nach der Arbeit mit
         „Felder leeren“ entfernen oder ein privates Fenster verwenden. Für die Geräte und die erzeugten PDF ist die
         einsetzende Stelle verantwortlich.</p>
 
-      <h2>6. Externe Links</h2>
+      <h2>7. Externe Links</h2>
       <p>Links zu GitHub, Erfassungsbogen.app oder anderen Seiten führen aus diesem Angebot heraus. Erst mit dem Klick
         baut dein Browser eine Verbindung zu diesen Anbietern auf; dort gelten deren Datenschutzerklärungen.</p>
 
-      <h2>7. Deine Rechte</h2>
+      <h2>8. Deine Rechte</h2>
       <p>Nach Art. 15 bis 21 DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung
         und Widerspruch. Anfragen gehen an die oben genannte E-Mail-Adresse. Daneben besteht ein Beschwerderecht bei
         einer Datenschutz-Aufsichtsbehörde (Art. 77 DSGVO). Die im Browser gespeicherten Einträge kannst du jederzeit
-        selbst löschen, wie unter Punkt 4 beschrieben.</p>
+        selbst löschen, wie unter Punkt 4 beschrieben; der Reichweitenmessung widersprichst du unter Punkt 5.</p>
     </main>
 
     <footer class="seite">

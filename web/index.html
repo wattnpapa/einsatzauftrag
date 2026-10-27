@@ -28,6 +28,19 @@
         document.querySelector('meta[name="theme-color"]').setAttribute("content", eaModus === "nacht" ? "#221f16" : "#0f1116");
     } catch (e) { /* Privatmodus: Standard-Darstellung */ }
   </script>
+  <!-- Reichweitenmessung, siehe datenschutz.html Punkt 5. Widerspruch über
+       localStorage „skipgc“, den count.js selbst auswertet. -->
+  <script>
+    // Erst nach dem Laden einbinden: Antwortet gc.zgo.at nicht, dreht sonst
+    // die Ladeanzeige des Browsers weiter, obwohl die Seite längst bereit ist.
+    addEventListener("load", function () {
+      var zaehler = document.createElement("script");
+      zaehler.async = true;
+      zaehler.src = "https://gc.zgo.at/count.js";
+      zaehler.setAttribute("data-goatcounter", "https://einsatzauftrag.goatcounter.com/count");
+      document.head.appendChild(zaehler);
+    });
+  </script>
 </head>
 <body>
   <div id="app">
