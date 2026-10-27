@@ -35,7 +35,7 @@ const satz = zeichneEinsatzauftrag(pdf, {
     empfaenger: "B-Gruppe 1. TZ",
     unterpunkte: { "1a": "Pegel 5,80 m, steigend.", "3b": "Sandsackverbau an Sickerstellen." },
     auftrag: "Deichabschnitt km 4,2 bis 4,6 sichern.",
-    fuehrung: "TMO 304_OL_THW\nEA Deich Süd",
+    fuehrung: "TMO 304_OL_THW\n\nEA Deich Süd",
     ortDatum: "Oldenburg, 27.10.2026"
 });
 console.log(satz.seiten.length, satz.schriftgroesse);

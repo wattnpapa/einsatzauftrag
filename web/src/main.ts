@@ -282,7 +282,7 @@ function baueMaske(): void {
         } else if (abschnitt.nummer === 2) {
             (eingabe(behaelter, "auftrag", "Erhaltener Auftrag", "textarea") as HTMLTextAreaElement).rows = 3;
         } else {
-            (eingabe(behaelter, "fuehrung", "Jede Zeile wird eine eigene Zeile im Vordruck", "textarea") as HTMLTextAreaElement).rows = 2;
+            (eingabe(behaelter, "fuehrung", "Eine Leerzeile beginnt eine neue Zeile im Vordruck", "textarea") as HTMLTextAreaElement).rows = 2;
         }
     }
 

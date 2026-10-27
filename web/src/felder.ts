@@ -72,8 +72,8 @@ export const FELDER: readonly Feld[] = [
     {
         schluessel: "fuehrung",
         titel: "5 Führung und Verbindung",
-        beschreibung: "5. Führung und Verbindung: Telekommunikationsverbindungen und Meldewesen, Führungsstellen, Einsatzleitungen, Platz des Führers. Jede Zeile der Zelle wird eine eigene Zeile im Vordruck.",
-        beispiel: "TMO-Gruppe 304_OL_THW, Rufname Heros Oldenburg 21/10\nEA Deich Süd, Gemeindehaus Tungeln",
+        beschreibung: "5. Führung und Verbindung: Telekommunikationsverbindungen und Meldewesen, Führungsstellen, Einsatzleitungen, Platz des Führers. Zeilenumbrüche bleiben erhalten; eine Leerzeile in der Zelle beginnt eine neue Zeile im Vordruck.",
+        beispiel: "TMO-Gruppe 304_OL_THW, Rufname Heros Oldenburg 21/10\n\nEA Deich Süd, Gemeindehaus Tungeln",
         auch: ["Führung und Verbindung", "Führung"],
         mehrzeilig: true,
         breite: 40

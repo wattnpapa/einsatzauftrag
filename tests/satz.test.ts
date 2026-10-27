@@ -171,3 +171,27 @@ describe("Logo", () => {
         expect(pdf.output()).toContain("/Subtype /Image");
     });
 });
+
+describe("Abschnitt 5", () => {
+    it("hält Zeilenumbrüche in einer Zelle und beginnt erst nach einer Leerzeile eine neue", () => {
+        const seite = setzeEinsatzauftrag(neuePdf(), { fuehrung: "Erreichbarkeiten:\n\nFüSt Rostock\nTel. 1\nTel. 2\n\n\nFührungsstelle Südtor 8" }, { schriftgroesse: 10 }).seiten[0];
+        const y = (text: string) => (seite?.elemente ?? []).find((e): e is Extract<Element, { art: "text" }> => e.art === "text" && e.text === text)?.y ?? NaN;
+        const zeile = 10 * 25.4 / 72 * 1.18;
+        expect(y("Tel. 1") - y("FüSt Rostock")).toBeCloseTo(zeile);
+        expect(y("Tel. 2") - y("Tel. 1")).toBeCloseTo(zeile);
+        // Zwischen den Blöcken liegt eine Zeilentrennung, also mehr als ein Zeilenabstand.
+        expect(y("FüSt Rostock") - y("Erreichbarkeiten:")).toBeGreaterThan(zeile + 1);
+        expect(y("Führungsstelle Südtor 8") - y("Tel. 2")).toBeGreaterThan(zeile + 1);
+        // Trennlinien quer über das Formular: oben an jeder der drei Zellen.
+        const zellen = (seite?.elemente ?? []).filter(e => e.art === "linie" && e.y1 === e.y2 && e.x1 === 10 && e.x2 === 200
+            && e.y1 > y("Erreichbarkeiten:") - 6 && e.y1 < y("Führungsstelle Südtor 8"));
+        expect(zellen).toHaveLength(3);
+    });
+
+    it("hat ohne Text zwei leere Zeilen wie der Vordruck", () => {
+        const mitText = setzeEinsatzauftrag(neuePdf(), { fuehrung: "A\nB" }, { schriftgroesse: 10 }).seiten[0];
+        const leer = setzeEinsatzauftrag(neuePdf(), {}, { schriftgroesse: 10 }).seiten[0];
+        const linien = (seite: Seite | undefined) => (seite?.elemente ?? []).filter(e => e.art === "linie").length;
+        expect(linien(mitText)).toBe(linien(leer));
+    });
+});

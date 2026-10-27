@@ -398,8 +398,10 @@ class Setzer {
         if (abschnitt.nummer === 2) {
             return [{ kennung: "", zeilen: this.umbrich(this.daten.auftrag, breite), mindesthoehe: AUFTRAG_MIN }];
         }
-        // Abschnitt 5: jede Textzeile in eine Formularzeile, mindestens zwei.
-        const absaetze = String(this.daten.fuehrung ?? "").replace(/\\n/g, "\n").split(/\r?\n/).map(absatz => absatz.trim()).filter(Boolean);
+        // Abschnitt 5: Zeilenumbrüche bleiben in der Zelle wie bei 3c; erst eine
+        // Leerzeile beginnt eine neue Formularzeile. Mindestens zwei wie im Vordruck.
+        const absaetze = String(this.daten.fuehrung ?? "").replace(/\\n/g, "\n").replace(/\r\n?/g, "\n")
+            .split(/\n[ \t]*\n/).map(absatz => absatz.replace(/^\s*\n|\n\s*$/g, "").trimEnd()).filter(absatz => absatz.trim() !== "");
         while (absaetze.length < 2) {
             absaetze.push("");
         }
