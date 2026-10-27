@@ -1,6 +1,6 @@
 import type { jsPDF } from "jspdf";
 import { ABSCHNITTE, type Abschnitt, type EinsatzauftragDaten } from "./daten.js";
-import { kuerzeAufBreite, umbrechen } from "./text.js";
+import { fuerPdf, kuerzeAufBreite, umbrechen } from "./text.js";
 
 // Satz des Einsatzauftrags: rechnet aus, was wohin kommt, und legt es als
 // Liste einfacher Zeichenelemente je Seite ab. Gezeichnet wird erst danach
@@ -86,39 +86,45 @@ export interface Einsatzauftragsatz {
 
 export const BLATT_BREITE = 210;
 export const BLATT_HOEHE = 297;
-const LINKS = 10;
-const RECHTS = 200;
+/** Seitenränder links 25 mm und rechts 20 mm nach DIN 5008. */
+const LINKS = 25;
+const RECHTS = BLATT_BREITE - 20;
 const BREITE = RECHTS - LINKS;
+/**
+ * Waagerechte Maße sind am Vordruck mit 190 mm Breite abgenommen und werden
+ * auf die Breite zwischen den Rändern umgerechnet.
+ */
+const QUER = BREITE / 190;
 const OBEN = 9;
 /** Unterkante des Formulars; darunter steht nur noch die Fußzeile. */
 const UNTEN = 285;
 const FUSS_Y = 291;
 
 const KOPF_HOEHE = 9.7;
-const KOPF_KENNUNG = 25.5;
-const KOPF_TITEL = 121.7;
+const KOPF_KENNUNG = 25.5 * QUER;
+const KOPF_TITEL = 121.7 * QUER;
 
 /** Abstand der beiden Striche einer Doppellinie. */
 const DOPPEL = 0.8;
 const STRICH = 0.2;
 const STRICH_FEIN = 0.15;
 
-const ADRESSE_BESCHRIFTUNG = 34;
-const ADRESSE_LFDNR = 34;
+const ADRESSE_BESCHRIFTUNG = 30;
+const ADRESSE_LFDNR = 30;
 const ADRESSE_MINDESTHOEHEN = [9.2, 13.5, 9] as const;
 
 const KENNUNG_SPALTE = 7.4;
 const ZEILE_MIN = 6.4;
 const AUFTRAG_MIN = 13;
 const ABSCHNITT_KOPF_MIN = 10;
-const ERLAEUTERUNG_X = 41.7;
+const ERLAEUTERUNG_X = 41.7 * QUER;
 
 const ABSCHLUSS_OBEN_MIN = 13.5;
 const ABSCHLUSS_UNTEN_MIN = 9.7;
 /** Spalten der Zeile „Abgesandt“: Beginn von „am/um“, „von“, „Unterschrift:“. */
-const ABGESANDT_SPALTEN = [28.4, 87.6, 136.1] as const;
+const ABGESANDT_SPALTEN = [28.4 * QUER, 87.6 * QUER, 136.1 * QUER] as const;
 /** Beginn von „Ort, Datum“, „Unterschrift“ und „Dienststelle“. */
-const ABSCHLUSS_SPALTEN = [9, 66, 139] as const;
+const ABSCHLUSS_SPALTEN = [9 * QUER, 66 * QUER, 139 * QUER] as const;
 
 const GELB = "#ffffa6";
 const BLAU = "#0000f5";
@@ -155,6 +161,14 @@ function oberlaenge(groesse: number): number {
  */
 export function setzeEinsatzauftrag(pdf: jsPDF, daten: EinsatzauftragDaten, optionen: EinsatzauftragOptionen = {}): Einsatzauftragsatz {
     const vorher = { schrift: pdf.getFont(), groesse: pdf.getFontSize() };
+    daten = druckbareDaten(daten);
+    optionen = {
+        ...optionen,
+        ...(optionen.kennung !== undefined ? { kennung: fuerPdf(optionen.kennung) } : {}),
+        ...(optionen.titel !== undefined ? { titel: fuerPdf(optionen.titel) } : {}),
+        ...(optionen.organisation !== undefined ? { organisation: fuerPdf(optionen.organisation) } : {}),
+        ...(optionen.fusszeile ? { fusszeile: fuerPdf(optionen.fusszeile) } : {})
+    };
     try {
         const groessen = optionen.schriftgroesse ? [optionen.schriftgroesse] : SCHRIFTGROESSEN;
         const versuche: Einsatzauftragsatz[] = [];
@@ -174,6 +188,20 @@ export function setzeEinsatzauftrag(pdf: jsPDF, daten: EinsatzauftragDaten, opti
         pdf.setFont(vorher.schrift.fontName, vorher.schrift.fontStyle);
         pdf.setFontSize(vorher.groesse);
     }
+}
+
+/** Alle Texte der Daten durch `fuerPdf`, damit Messen und Zeichnen dieselben Zeichen sehen. */
+function druckbareDaten(daten: EinsatzauftragDaten): EinsatzauftragDaten {
+    const ergebnis: EinsatzauftragDaten = {};
+    for (const [schluessel, wert] of Object.entries(daten) as [keyof EinsatzauftragDaten, unknown][]) {
+        if (typeof wert === "string") {
+            (ergebnis as Record<string, unknown>)[schluessel] = fuerPdf(wert);
+        } else if (wert && typeof wert === "object") {
+            (ergebnis as Record<string, unknown>)[schluessel] = Object.fromEntries(Object.entries(wert as Record<string, unknown>)
+                .map(([punkt, text]) => [punkt, typeof text === "string" ? fuerPdf(text) : text]));
+        }
+    }
+    return ergebnis;
 }
 
 interface Textzeilen {
@@ -541,7 +569,7 @@ class Setzer {
             this.linie(x, mitte, x, unten);
         }
         const grundlinie = mitte + ABSCHLUSS_UNTEN_MIN / 2 + SCHRIFT_BESCHRIFTUNG * PT * 0.35;
-        const um = am + 29.5;
+        const um = am + 29.5 * QUER;
         this.text("Abgesandt", LINKS + 1.5, grundlinie, SCHRIFT_BESCHRIFTUNG);
         this.text("am", am + 1.5, grundlinie, SCHRIFT_BESCHRIFTUNG);
         this.text("um", um, grundlinie, SCHRIFT_BESCHRIFTUNG);

@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { describe, expect, it } from "vitest";
-import { kuerzeAufBreite, trenneLangeWoerter, umbrechen } from "../src/text.js";
+import { fuerPdf, kuerzeAufBreite, trenneLangeWoerter, umbrechen } from "../src/text.js";
 
 function pdf(): jsPDF {
     const dokument = new jsPDF({ unit: "mm", format: "a4" });
@@ -47,5 +47,14 @@ describe("kuerzeAufBreite", () => {
         const gekuerzt = kuerzeAufBreite(dokument, "ein ziemlich langer Text ohne Ende", 20);
         expect(gekuerzt.endsWith("…")).toBe(true);
         expect(dokument.getTextWidth(gekuerzt)).toBeLessThanOrEqual(20);
+    });
+});
+
+describe("fuerPdf", () => {
+    it("lässt WinAnsi stehen und ersetzt, was Helvetica nicht kennt", () => {
+        expect(fuerPdf("Grüße „Test“ – 5 € … ß")).toBe("Grüße „Test“ – 5 € … ß");
+        expect(fuerPdf("54.13514° N → https://x")).toBe("54.13514° N -> https://x");
+        expect(fuerPdf("a\u200bb\tc\r\nd\re")).toBe("ab c\nd\ne");
+        expect(fuerPdf("Łódź ✓ 😀")).toBe("?ódz x ?");
     });
 });

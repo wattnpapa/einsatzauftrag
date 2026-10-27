@@ -88,3 +88,44 @@ export function kuerzeAufBreite(pdf: jsPDF, text: string, maxWidth: number): str
     }
     return `${gekuerzt}…`;
 }
+
+/** Ersatz für häufige Zeichen, die Helvetica in der PDF nicht kennt. */
+const ERSATZ: Record<string, string> = {
+    "→": "->", "⇒": "=>", "⟶": "->", "➔": "->", "➜": "->", "➞": "->", "▶": ">", "►": ">",
+    "←": "<-", "⇐": "<=", "⟵": "<-", "↔": "<->", "⇔": "<=>", "↑": "^", "↓": "v",
+    "≥": ">=", "≤": "<=", "≠": "!=", "≈": "~", "−": "-", "‑": "-", "‐": "-", "‒": "-", "―": "—",
+    "✓": "x", "✔": "x", "☑": "[x]", "☐": "[ ]", "✗": "x", "✘": "x", "❌": "x",
+    "◦": "-", "▪": "•", "■": "•", "●": "•", "◆": "•", "‣": "•", "⁃": "-",
+    "‚": "‚", "‛": "'", "′": "'", "″": "\"", "‹": "‹", "›": "›",
+    "­": "", "​": "", "‌": "", "‍": "", "⁠": "", "﻿": "",
+    " ": " ", " ": " ", " ": " ", " ": " ", " ": " ", " ": " "
+};
+
+/** Was die Standardschriften der PDF (WinAnsi) über Latin-1 hinaus darstellen. */
+const WINANSI_ZUSATZ = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
+
+/**
+ * Macht Text für die Standardschriften der PDF druckbar. Ein einziges Zeichen
+ * außerhalb von WinAnsi (etwa „→“) lässt jsPDF die ganze Zeile anders
+ * kodieren: Sie erscheint gesperrt, mit falschen Zeichen und zu breit. Solche
+ * Zeichen werden ersetzt, Akzente notfalls abgelegt, der Rest wird zu „?“.
+ */
+export function fuerPdf(text: string): string {
+    let ergebnis = "";
+    for (const zeichen of text.replace(/\r\n?/g, "\n").normalize("NFC")) {
+        const code = zeichen.codePointAt(0) ?? 0;
+        if (zeichen === "\n" || (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff) || WINANSI_ZUSATZ.has(zeichen)) {
+            ergebnis += zeichen;
+        } else if (zeichen in ERSATZ) {
+            ergebnis += ERSATZ[zeichen];
+        } else if (zeichen === "\t") {
+            ergebnis += " ";
+        } else if (code < 0x20 || (code >= 0x7f && code < 0xa0)) {
+            // Steuerzeichen fallen weg.
+        } else {
+            const ohneAkzent = zeichen.normalize("NFD").replace(/[̀-ͯ]/g, "");
+            ergebnis += ohneAkzent && [...ohneAkzent].every(teil => (teil.codePointAt(0) ?? 0) <= 0xff) ? ohneAkzent : "?";
+        }
+    }
+    return ergebnis;
+}

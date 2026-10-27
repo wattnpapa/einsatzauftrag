@@ -51,6 +51,20 @@ describe("setzeEinsatzauftrag", () => {
         }
     });
 
+    it("hält die Seitenränder nach DIN 5008 ein: links 25 mm, rechts 20 mm", () => {
+        const pdf = neuePdf();
+        const daten: EinsatzauftragDaten = { einsatz: "x ".repeat(300), auftrag: Array(80).fill(satz).join(" "), abgesandtVon: "y".repeat(200) };
+        for (const seite of setzeEinsatzauftrag(pdf, daten, { fusszeile: "z ".repeat(200) }).seiten) {
+            for (const e of seite.elemente) {
+                const [links, rechts] = e.art === "linie" ? [Math.min(e.x1, e.x2), Math.max(e.x1, e.x2)]
+                    : e.art === "text" ? (e.ausrichtung === "links" ? [e.x, e.x + e.breite] : e.ausrichtung === "rechts" ? [e.x - e.breite, e.x] : [e.x - e.breite / 2, e.x + e.breite / 2])
+                    : [e.x, e.x + e.b];
+                expect(links).toBeGreaterThanOrEqual(25 - 1e-9);
+                expect(rechts).toBeLessThanOrEqual(190 + 1e-9);
+            }
+        }
+    });
+
     it("trägt alle Felder ein", () => {
         const daten: EinsatzauftragDaten = {
             absender: "OV Oldenburg",
@@ -124,7 +138,7 @@ describe("setzeEinsatzauftrag", () => {
         expect(bild).toMatchObject({ art: "bild", format: "PNG" });
         if (bild?.art === "bild") {
             expect(bild.b / bild.h).toBeCloseTo(2);
-            expect(bild.x + bild.b).toBeLessThanOrEqual(200);
+            expect(bild.x + bild.b).toBeLessThanOrEqual(190);
         }
         const leer = setzeEinsatzauftrag(neuePdf(), {}, { logo, organisation: "" }).seiten[0];
         expect(texte(leer)).not.toContain("Hilfswerk");
@@ -183,7 +197,7 @@ describe("Abschnitt 5", () => {
         expect(y("FüSt Rostock") - y("Erreichbarkeiten:")).toBeGreaterThan(zeile + 1);
         expect(y("Führungsstelle Südtor 8") - y("Tel. 2")).toBeGreaterThan(zeile + 1);
         // Trennlinien quer über das Formular: oben an jeder der drei Zellen.
-        const zellen = (seite?.elemente ?? []).filter(e => e.art === "linie" && e.y1 === e.y2 && e.x1 === 10 && e.x2 === 200
+        const zellen = (seite?.elemente ?? []).filter(e => e.art === "linie" && e.y1 === e.y2 && e.x1 === 25 && e.x2 === 190
             && e.y1 > y("Erreichbarkeiten:") - 6 && e.y1 < y("Führungsstelle Südtor 8"));
         expect(zellen).toHaveLength(3);
     });
