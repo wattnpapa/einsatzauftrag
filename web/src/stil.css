@@ -1,0 +1,794 @@
+/* ===============================================================
+   Gestaltung nach dem Design-System von erfassungsbogen.app
+   („Amtlich, aber wach"): Rollen-Token als einzige Quelle, Radius 0,
+   Linien statt Schatten, Kennfarbe nur im Kopf und an der primären
+   Aktion. Die Anzeigemodi belegen dieselben Token neu.
+   =============================================================== */
+:root {
+  color-scheme: light;
+
+  --grund:       #f3f5f9;
+  --flaeche:     #ffffff;
+  --flaeche-2:   #e8ebf2;
+  --text:        #11141b;
+  --text-2:      #5c6478;
+  --text-3:      #6b7488;
+  --linie-fein:  #d7dce7;
+  --linie:       #bcc3d3;
+  --linie-stark: #7a8398;
+
+  --akzent:      #12275e;
+  --akzent-hell: #1d3d8f;
+  --auf-akzent:  #ffffff;
+
+  --gut:         #146b3a;
+  --gut-fond:    #e8f4ed;
+  --gut-linie:   #a9d3bc;
+  --warn-text:   #6d4700;
+  --warn-fond:   #fdf4dd;
+  --warn-linie:  #ddbe79;
+  --alarm:       #a4231c;
+  --alarm-fond:  #fdecea;
+  --alarm-linie: #eaa79d;
+
+  --radius:       0px;
+  --strich:       1px;
+  --strich-stark: 1px;
+  --fokus:        3px;
+  --ziel-basis:   2.75rem;
+  --ziel:         0rem;
+
+  --dauer-1: 120ms;
+  --kurve: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --schrift: "Archivo Variable", Archivo, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift-daten: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --t-xs:  0.8125rem;
+  --t-s:   0.875rem;
+  --t-m:   1rem;
+  --t-l:   1.125rem;
+  --t-xl:  1.375rem;
+  --t-2xl: 1.75rem;
+
+  --r-1: 0.25rem;
+  --r-2: 0.5rem;
+  --r-3: 0.75rem;
+  --r-4: 1rem;
+  --r-5: 1.5rem;
+  --r-6: 2rem;
+
+  /* Breiter als die 60rem von erfassungsbogen.app: Maske und Vorschau
+     stehen auf dem Desktop nebeneinander. */
+  --satzspiegel: 76rem;
+
+  --kopf-fond:  var(--akzent);
+  --kopf-auf:   var(--auf-akzent);
+  --kopf-auf-2: #cbcfdc;
+  --kopf-linie: rgba(255, 255, 255, 0.3);
+  --kopf-kante:       4px;
+  --kopf-kante-farbe: rgba(0, 0, 0, 0.35);
+  --vorschau-fond: #525659;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--schrift);
+  font-size: var(--t-m);
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--grund);
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+}
+#app { min-height: 100dvh; display: flex; flex-direction: column; }
+main {
+  width: 100%; max-width: var(--satzspiegel); margin: 0 auto;
+  padding: var(--r-5) min(var(--r-4), 18px) var(--r-6);
+}
+main:focus { outline: none; }
+
+h1 { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-size: var(--t-xl); font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; margin: 0 0 var(--r-3); }
+h3 { font-size: var(--t-l); font-weight: 700; margin: 0 0 var(--r-1); }
+h4 { font-size: var(--t-m); font-weight: 700; margin: var(--r-4) 0 0; }
+p { margin: 0 0 var(--r-2); }
+
+.einleitung { max-width: 52ch; color: var(--text-2); font-size: var(--t-l); }
+@media (max-width: 40rem) { .einleitung { font-size: var(--t-s); } }
+.offline-badge {
+  display: block; width: max-content; max-width: 100%;
+  font-size: var(--t-s); font-weight: 600; color: var(--gut);
+  border: var(--strich) solid var(--gut); padding: 0.3rem 0.6rem; margin: var(--r-2) 0 var(--r-5);
+}
+.nebentext { font-size: var(--t-s); color: var(--text-2); }
+.hinweis { font-size: var(--t-xs); color: var(--text-2); margin: var(--r-2) 0 0; }
+.fehler { color: var(--alarm); font-weight: 600; }
+.textlaenge.hinweis { font-size: var(--t-s); }
+.textlaenge.warnung { font-weight: 600; }
+.entwurf { font-size: var(--t-m); margin: 0 0 var(--r-5); }
+.entwurf p { margin: 0; }
+.entwurf .aktionen { margin: var(--r-3) 0 0; gap: var(--r-4); }
+/* Belegte Felder im zugeklappten Bereich: Zahl als Marke hinter der Überschrift. */
+.zaehler {
+  margin-left: var(--r-2); font-size: var(--t-s); font-weight: 700;
+  color: var(--warn-text); background: var(--warn-fond); border: var(--strich) solid var(--warn-linie);
+  padding: 0.1rem 0.45rem; white-space: nowrap;
+}
+.daten { font-family: var(--schrift-daten); }
+
+.nur-sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; margin: 0; padding: 0; border: 0;
+}
+[hidden] { display: none !important; }
+
+/* ---- Sprungmarke ------------------------------------------------- */
+.sprungmarke {
+  position: absolute; left: var(--r-2); top: -3rem; z-index: 100;
+  background: var(--flaeche); color: var(--akzent);
+  border: var(--strich-stark) solid var(--akzent);
+  min-height: 0; transition: top var(--dauer-1) ease-out;
+}
+.sprungmarke:focus { top: var(--r-2); }
+
+/* ---- Seitenkopf ------------------------------------------------- */
+.seiten-kopf {
+  background: var(--kopf-fond); color: var(--kopf-auf);
+  border-bottom: var(--kopf-kante) solid var(--kopf-kante-farbe);
+}
+.seiten-kopf .kopf-inhalt {
+  width: 100%; max-width: var(--satzspiegel); margin: 0 auto;
+  padding: var(--r-3) min(var(--r-4), 18px) 0;
+  display: flex; flex-direction: column;
+}
+.seiten-kopf .titelzeile {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--r-3);
+  padding: var(--r-2) 0 var(--r-4);
+}
+.seiten-kopf h1 { flex: 1 1 14rem; color: var(--kopf-auf); }
+
+.anzeige-schalter {
+  display: inline-flex; flex-wrap: wrap; gap: 10px; max-width: 100%; margin-left: auto;
+}
+/* Im Balken: inaktive Segmente durchsichtig, das gewählte als helle Fläche. */
+/* Gleich breite Segmente: „Feld“ ist sonst das schmalste und am schwersten zu treffen. */
+.anzeige-schalter button {
+  border: none; background: none; color: var(--kopf-auf-2);
+  padding: 0.25rem 0.7rem; font-size: var(--t-s); flex: 1 1 0; min-width: 3.75rem;
+}
+/* Getrennte Segmente mit Lücke: ein Fehltipp trifft nicht gleich den Nachbarn. */
+.anzeige-schalter button { border: var(--strich) solid var(--kopf-linie); }
+/* Nachts ist der gewählte Modus ein Rahmen statt der hellsten Fläche des Bildes. */
+.nacht-modus .anzeige-schalter button[aria-pressed="true"], .dunkel-modus .anzeige-schalter button[aria-pressed="true"],
+.nacht-modus .anzeige-schalter button[aria-pressed="true"]:hover, .dunkel-modus .anzeige-schalter button[aria-pressed="true"]:hover {
+  background: none; color: var(--akzent-hell); box-shadow: inset 0 0 0 2px var(--akzent);
+}
+.anzeige-schalter button[aria-pressed="true"] { background: var(--kopf-auf); color: var(--kopf-fond); }
+@media (hover: hover) { .anzeige-schalter button:hover { color: var(--kopf-auf); } .anzeige-schalter button[aria-pressed="true"]:hover { color: var(--kopf-fond); } }
+.anzeige-schalter button:focus-visible { outline-color: var(--kopf-auf); outline-offset: -3px; }
+
+.modus-erklaerung { margin: calc(-1 * var(--r-2)) 0 var(--r-2); font-size: var(--t-xs); color: var(--kopf-auf-2); }
+
+/* Reiter an der Unterkante des Balkens, aktiver mit 3-px-Unterstrich und Fläche. */
+.reiter { display: flex; gap: 0 var(--r-2); }
+.reiter .kurz { display: none; }
+@media (max-width: 30rem) {
+  .reiter button { flex: 1 1 0; }
+  .reiter .lang { display: none; }
+  .reiter .kurz { display: inline; }
+}
+.reiter button {
+  background: none; border: none; color: var(--kopf-auf-2);
+  border-bottom: 3px solid transparent; padding: 0.4rem 0.8rem 0.5rem;
+  font-size: var(--t-m);
+}
+.reiter button[aria-selected="true"] { color: var(--kopf-auf); border-bottom-color: var(--kopf-auf); background: rgba(255, 255, 255, 0.12); }
+@media (hover: hover) { .reiter button:hover { color: var(--kopf-auf); border-color: transparent; border-bottom-color: var(--kopf-auf-2); } }
+.reiter button:focus-visible { outline-color: var(--kopf-auf); outline-offset: -3px; }
+
+/* ---- Knöpfe ------------------------------------------------------ */
+button, .datei-knopf {
+  font: inherit; font-size: var(--t-s); font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  min-height: calc(var(--ziel-basis) + var(--ziel));
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  border: var(--strich-stark) solid var(--linie-stark);
+  border-radius: var(--radius); background: var(--flaeche); cursor: pointer;
+  color: var(--text); -webkit-appearance: none; appearance: none;
+  transition: color var(--dauer-1), border-color var(--dauer-1), background-color var(--dauer-1);
+}
+@media (hover: hover) { button:hover, .datei-ziel:hover .datei-knopf { border-color: var(--akzent); color: var(--akzent); } }
+button.primaer, .datei-knopf.primaer { background: var(--akzent); color: var(--auf-akzent); border-color: var(--akzent); }
+@media (hover: hover) {
+  button.primaer:hover, .datei-ziel:hover .datei-knopf.primaer { background: var(--akzent-hell); border-color: var(--akzent-hell); color: var(--auf-akzent); }
+}
+button:disabled { opacity: 0.75; cursor: default; }
+button.arbeitet:disabled { opacity: 1; background: var(--flaeche-2); color: var(--text); border-color: var(--linie-stark); }
+button:focus-visible, a:focus-visible, .datei-ziel:focus-within .datei-knopf, summary:focus-visible {
+  outline: var(--fokus) solid var(--akzent); outline-offset: 1px;
+}
+button.link {
+  border: none; background: none; min-height: 0; padding: 0.4rem 0;
+  color: var(--akzent-hell); text-decoration: underline; text-underline-offset: 0.2em;
+}
+
+.aktionen { display: flex; gap: var(--r-2); flex-wrap: wrap; margin-top: var(--r-4); }
+.aktionen > button { font-size: var(--t-m); padding: 0.6rem 1.1rem; }
+@media (max-width: 30rem) {
+  .aktionen { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+}
+
+/* ---- Karten und Formular ----------------------------------------- */
+.karte {
+  background: var(--flaeche); border: var(--strich) solid var(--linie-stark); border-radius: var(--radius);
+  padding: var(--r-4) min(var(--r-4), 18px); margin: 0 0 var(--r-4);
+}
+.karten-paar { display: grid; gap: var(--r-4); margin-bottom: var(--r-4); }
+.karten-paar > .karte { margin-bottom: 0; display: flex; flex-direction: column; }
+.karten-paar > .karte > .aktionen, .karten-paar > .karte > .datei-ziel { margin-top: auto; }
+@media (min-width: 48rem) { .karten-paar { grid-template-columns: 1fr 1fr; } }
+
+.zeile { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-end; }
+.zeile > label.feld { flex: 1 1 10rem; min-width: 0; }
+.zeile > label.feld.schmal { flex: 0 1 7rem; }
+.zeile > label.feld.mittel { flex: 0 1 12rem; }
+
+label.feld { display: block; margin: var(--r-3) 0 0; font-size: var(--t-xs); font-weight: 600; color: var(--text-2); }
+label.feld > input, label.feld > select, label.feld > textarea { display: block; width: 100%; margin-top: var(--r-1); }
+input, select, textarea {
+  font: inherit; font-size: var(--t-m); padding: 0.45rem 0.55rem;
+  border: var(--strich-stark) solid var(--linie-stark);
+  border-radius: var(--radius); background: var(--flaeche); color: var(--text);
+  max-width: 100%; transition: border-color var(--dauer-1);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea {
+  min-height: calc(var(--ziel-basis) + var(--ziel));
+}
+textarea { resize: vertical; line-height: 1.45; }
+/* Eigene Kästchen statt der grauen Browser-Kästchen: kräftiger Rand, auch in der Sonne zu sehen. */
+input[type="checkbox"], input[type="radio"] {
+  appearance: none; -webkit-appearance: none;
+  width: 1.5rem; height: 1.5rem; min-height: 0; padding: 0; margin: 0; flex: 0 0 auto;
+  display: inline-grid; place-content: center; cursor: pointer;
+  border: var(--strich-stark) solid var(--linie-stark); background: var(--flaeche);
+}
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]::before {
+  content: ""; width: 0.95rem; height: 0.95rem; transform: scale(0);
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); background: var(--auf-akzent);
+}
+input[type="radio"]::before {
+  content: ""; width: 0.75rem; height: 0.75rem; border-radius: 50%; transform: scale(0); background: var(--akzent);
+}
+input[type="checkbox"]:checked { background: var(--akzent); border-color: var(--akzent); }
+input[type="radio"]:checked { border-color: var(--akzent); }
+input[type="checkbox"]:checked::before, input[type="radio"]:checked::before { transform: scale(1); }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: var(--fokus) solid var(--akzent); outline-offset: 2px; }
+input::placeholder, textarea::placeholder { color: var(--text-3); font-style: italic; }
+input:focus, select:focus, textarea:focus {
+  outline: var(--fokus) solid var(--akzent); outline-offset: 0; border-color: var(--akzent);
+}
+
+/* Die Kästchenzeile ist das Tippziel, nicht das Kästchen. */
+label.inline {
+  display: inline-flex; align-items: center; gap: var(--r-2);
+  min-height: calc(var(--ziel-basis) + var(--ziel)); cursor: pointer;
+  margin-right: var(--r-4);
+}
+label.inline.unten { margin-bottom: 0; }
+
+fieldset.wahl { border: none; margin: 0; padding: 0; min-width: 0; flex: 1 1 14rem; }
+fieldset.wahl legend {
+  font-family: var(--schrift-daten); font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-2); padding: 0; margin-bottom: var(--r-1);
+}
+fieldset.wahl label.inline { display: flex; margin-right: 0; }
+/* Abstand zwischen den Optionen, damit ein grober Tipp nicht die Nachbarzeile trifft. */
+fieldset.wahl label.inline + label.inline { margin-top: var(--r-2); }
+fieldset.wahl.richtung { flex: 0 1 auto; }
+fieldset.wahl.richtung label.inline { display: inline-flex; margin-right: var(--r-4); }
+.einstellungen .zeile { align-items: flex-start; gap: var(--r-3) var(--r-5); }
+
+details.karte > summary, details.verlauf > summary {
+  cursor: pointer; font-size: var(--t-l); font-weight: 700; list-style: none;
+  min-height: calc(var(--ziel-basis) + var(--ziel)); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--r-2);
+  margin: calc(-1 * var(--r-2)) 0;
+}
+details.karte > summary::-webkit-details-marker, details.verlauf > summary::-webkit-details-marker { display: none; }
+/* Pfeil vor der Überschrift: zugeklappt nach rechts, offen nach unten. */
+details.karte > summary::before, details.verlauf > summary::before {
+  content: ""; flex: none; width: 0.55em; height: 0.55em; margin-right: 0.15em;
+  border-right: var(--strich-stark) solid currentColor; border-bottom: var(--strich-stark) solid currentColor;
+  transform: rotate(-45deg);
+}
+details[open].karte > summary::before, details[open].verlauf > summary::before { transform: rotate(45deg); }
+details.karte[open] > summary { margin-bottom: 0; }
+summary .stand { font-size: var(--t-s); font-weight: 400; color: var(--text-2); }
+.einstellungen[open] > summary { margin-bottom: var(--r-3); }
+.versatz { margin-top: var(--r-2); }
+.versatz .hinweis { margin-top: 0; }
+
+.verteiler table { border-collapse: collapse; margin-top: var(--r-1); }
+.verteiler th, .verteiler td { padding: 0 var(--r-2) 0 0; text-align: center; font-size: var(--t-s); }
+.verteiler th[scope="row"] { text-align: left; font-family: var(--schrift-daten); color: var(--text-2); padding-right: var(--r-3); }
+.verteiler td { padding: 5px var(--r-3) 5px 0; }
+.verteiler td label {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: calc(var(--ziel-basis) + var(--ziel)); min-height: calc(var(--ziel-basis) + var(--ziel)); cursor: pointer;
+  border: var(--strich) solid transparent;
+}
+/* Ein gesetztes Kreuz soll im Raster auffallen, ein falsches auch. */
+.verteiler td label:has(input:checked) { background: var(--warn-fond); border-color: var(--warn-linie); }
+/* Freies Feld für den Empfänger, wie auf dem Bogen neben dem Kästchen. */
+.verteiler { max-width: 100%; overflow-x: auto; }
+.verteiler td { white-space: nowrap; }
+/* Mindestens 12 px zwischen Kästchen und Feld, damit ein Tipp am Rand nicht im falschen Ziel landet. */
+.verteiler td input.verteiler-text { width: 7rem; max-width: 100%; vertical-align: middle; margin-left: var(--r-3); }
+.verteiler td { padding-top: var(--r-2); padding-bottom: var(--r-2); }
+/* Am Telefon sind die drei Spalten feste Drittel der Breite, das Feld steht unter dem Kästchen: So bleibt die Seite so breit wie der Bildschirm. */
+@media (max-width: 40rem) {
+  .verteiler table { width: 100%; table-layout: fixed; }
+  .verteiler td { white-space: normal; vertical-align: top; padding-right: 4px; }
+  .verteiler td label { display: flex; justify-content: flex-start; }
+  .verteiler td input.verteiler-text { display: block; width: 100%; margin: var(--r-3) 0 0; padding-inline: 0.2rem; }
+  .verteiler th[scope="row"] { width: 1.9rem; padding-right: 2px; }
+}
+/* Ein Empfängerfeld, das auf dem Bogen gekürzt würde: in jedem Modus kräftig gestrichelt, dazu ein Wort, das nicht von Farbe und Strich abhängt. */
+.verteiler td input.verteiler-text.zu-lang-feld { border-style: dashed; border-width: 3px; border-color: var(--alarm); background: var(--warn-fond); }
+.verteiler .verteiler-wort { display: block; margin: 2px 0 0 var(--r-3); font-size: var(--t-s); font-weight: 700; color: var(--alarm); white-space: normal; text-align: left; }
+/* Der Platz bleibt reserviert: Erscheint „zu lang“, rutschen die Zeilen darunter nicht. */
+.verteiler .verteiler-wort.aus { visibility: hidden; }
+.verteiler .verteiler-wort { min-height: 1.3em; }
+@media (max-width: 40rem) {
+  .verteiler .verteiler-wort { margin-left: 0; }
+}
+
+/* ---- Arbeitsfläche: Maske links, Vorschau rechts ------------------ */
+.arbeitsflaeche { display: grid; gap: 0 var(--r-4); }
+@media (min-width: 64rem) {
+  .arbeitsflaeche { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .arbeitsflaeche > .maske { grid-column: 1; grid-row: 1; }
+  .arbeitsflaeche > .abschluss { grid-column: 1; grid-row: 2; }
+  .vorschau { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: var(--r-4); }
+  /* Neben dem Formular ganz sichtbar bleiben, auch mit zwei Vordrucken untereinander. */
+  .vorschau .bildvorschau { width: auto; max-width: 100%; max-height: calc(100vh - 9rem); margin-inline: auto; }
+}
+.abschluss .aktionen { margin-top: 0; margin-bottom: var(--r-2); gap: var(--r-4); }
+/* „Felder leeren“ mit Abstand zu „PDF herunterladen“: kein Fehlgriff mit Handschuh. */
+.aktionen > .abgesetzt { margin-left: var(--r-4); }
+@media (max-width: 40rem) { .aktionen > .abgesetzt { margin: var(--r-4) 0 0; } }
+.abschluss button.link { min-height: calc(var(--ziel-basis) + var(--ziel)); }
+/* Abstand zu „Felder leeren“: ein Tipp daneben soll nicht den anderen Knopf treffen. */
+#einzeln-status { margin-top: var(--r-4); }
+.verlauf { margin-top: var(--r-3); }
+.verlauf > summary { font-size: var(--t-m); }
+/* Am Telefon liegt der Download weit unten: der Sprung dorthin bleibt am unteren Rand. */
+.sprungleiste {
+  position: sticky; bottom: 0; z-index: 1;
+  padding: var(--r-2) 0; background: var(--grund);
+}
+.sprungleiste button { width: 100%; }
+@media (min-width: 64rem) { .sprungleiste { display: none; } }
+/* Beim Tippen (Tastatur offen) nimmt die Leiste zu viel Platz und fängt Tipps ab.
+   Nur Textfelder zählen: Ein Tipp auf die Leiste selbst oder ein Kästchen blendet sie nicht aus. */
+/* Unsichtbar statt entfernt: Die Seite verschiebt sich nicht, wenn die Leiste wiederkommt. */
+.maske:has(textarea:focus, input:focus:not([type=radio], [type=checkbox], [type=button], [type=file])) .sprungleiste { visibility: hidden; pointer-events: none; transition: none; }
+/* Wieder einblenden erst nach einer halben Sekunde: Wer das Textfeld durch einen Tipp auf einen
+   Knopf am unteren Rand verlässt, soll diesen Knopf treffen, nicht die auftauchende Leiste. */
+.sprungleiste { transition: visibility 0s 0.5s; }
+/* Im flachen Querformat kein schwebender Knopf (er läge über Feldern); stattdessen
+   steht ein Sprungknopf fest zwischen den Karten. */
+.sprung-quer { display: none; }
+@media (max-height: 30rem) {
+  .sprungleiste { position: static; }
+  .sprung-quer { display: block; width: 100%; margin: 0 0 var(--r-4); }
+}
+/* Querformat am Telefon: Vorschau auf Bildschirmhöhe, sonst liegt der Download Bildschirme tiefer. */
+@media (orientation: landscape) and (max-height: 30rem) {
+  .vorschau .bildvorschau { width: auto; max-width: 100%; max-height: calc(100vh - 2rem); margin-inline: auto; }
+}
+
+/* Wer die App schon kennt, braucht die Einleitung am Telefon nicht über der Maske. */
+@media (max-width: 40rem) { .wiederkehrend .einleitung { display: none; } }
+
+/* Kurzmeldung ganz unten, über der Sprungleiste statt über den Feldern; sie schließt beim ersten Tippen. */
+.kurzmeldung {
+  position: fixed; left: 50%; bottom: var(--r-2); z-index: 6; transform: translateX(-50%);
+  width: min(30rem, calc(100vw - 2rem)); padding: var(--r-3);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--r-2) var(--r-3);
+  color: var(--text); background: var(--flaeche); border: var(--strich-stark) solid var(--akzent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 4px var(--grund); font-size: var(--t-s);
+}
+.kurzmeldung[hidden] { display: none; }
+/* Ohne Knöpfe: Ein Tipp auf die Meldung schließt sie nur und löst nichts darunter aus. */
+.kurzmeldung { cursor: pointer; }
+.kurzmeldung .kurzmeldung-knoepfe { display: none; }
+.kurzmeldung.mit-knopf .kurzmeldung-knoepfe { display: flex; flex-wrap: nowrap; width: 100%; }
+/* Gleiche Breite, fester Platz: Zurücknehmen links, OK rechts, auch wenn sich die Beschriftung ändert. */
+.kurzmeldung.mit-knopf .kurzmeldung-knoepfe button { flex: 1 1 0; min-width: 0; }
+.kurzmeldung > span:first-child { flex: 1 1 14rem; }
+.kurzmeldung-knoepfe { display: flex; gap: var(--r-4); }
+@media (min-width: 64rem) { .kurzmeldung { bottom: var(--r-4); } }
+/* Im flachen Querformat oben: unten läge sie über dem Feld, in dem getippt wird. */
+@media (max-height: 30rem) { .kurzmeldung { top: var(--r-2); bottom: auto; } }
+/* Nicht wie ein zweiter Knopf über der Sprungleiste: dünner Rahmen, Akzent nur links. */
+.kurzmeldung { border: var(--strich) solid var(--linie-stark); border-left: 6px solid var(--akzent); }
+
+/* Prüfübersicht: hoher Vorrang fällt auf, leere Auswahl ist als „leer“ gedämpft. */
+/* Rot bleibt den Fehlern vorbehalten; hoher Vorrang ist fett, Blitz zusätzlich mit Zeichen und Rahmen. */
+table.uebersicht td.vorrang-hoch { font-weight: 700; }
+table.uebersicht td.vorrang-blitz { font-weight: 800; letter-spacing: 0.04em; outline: var(--strich-stark) solid var(--text); outline-offset: -3px; }
+table.uebersicht td.leer { color: var(--text-3); font-style: italic; }
+table.uebersicht td.ohne { color: var(--text-3); }
+table.uebersicht td.zu-lang { box-shadow: inset 0 -3px 0 var(--warnung-rand, var(--akzent)); }
+
+/* Hinweis nur in den dunklen Modi. */
+.nur-dunkel { display: none; }
+.dunkel-modus .nur-dunkel, .nacht-modus .nur-dunkel { display: inline; }
+.laedt { font-size: var(--t-s); color: var(--text-2); }
+.netz { margin: 0 0 var(--r-4); }
+.abschluss { margin-bottom: var(--r-4); }
+.bildvorschau {
+  display: block; width: 100%; margin-top: var(--r-2);
+  border: var(--strich) solid var(--linie); background: var(--vorschau-fond);
+}
+.kopfzeile { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.4rem 1rem; }
+.vorschau iframe {
+  display: block; width: 100%; border: var(--strich) solid var(--linie);
+  background: var(--vorschau-fond); margin-top: var(--r-2);
+  /* A4 quer bzw. A5 hoch passen ohne Rollen hinein. */
+  height: min(80vh, 46rem);
+}
+
+/* ---- Datei einlesen ---------------------------------------------- */
+.datei-ziel {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--r-2) var(--r-3);
+  border: var(--strich) dashed var(--linie-stark); padding: var(--r-4); margin-top: var(--r-3);
+  cursor: pointer; background: var(--grund);
+}
+.datei-ziel.ueber { border-color: var(--akzent); border-style: solid; background: var(--flaeche-2); }
+
+/* ---- Ergebnis ---------------------------------------------------- */
+.warnung, .alarm-kasten {
+  border: var(--strich) solid; padding: 0.5rem 0.7rem; font-size: var(--t-s); margin: var(--r-2) 0;
+}
+.warnung { color: var(--warn-text); background: var(--warn-fond); border-color: var(--warn-linie); }
+.alarm-kasten { color: var(--alarm); background: var(--alarm-fond); border-color: var(--alarm-linie); }
+/* Nicht nur über die Farbe unterscheidbar: Fehler mit breitem, Hinweise mit gestricheltem Rand links. */
+.alarm-kasten { border-left-width: 6px; }
+.warnung { border-left: 6px dashed var(--warn-linie); }
+.alarm-kasten ul, .warnung ul { margin: var(--r-1) 0 0; padding-left: 1.2rem; }
+
+.tabellen-scroll { overflow-x: auto; position: relative; margin-top: var(--r-3); }
+table.uebersicht { width: 100%; border-collapse: collapse; font-size: var(--t-s); }
+table.uebersicht th, table.uebersicht td {
+  border: var(--strich) solid var(--linie); padding: 0.35rem 0.5rem; text-align: left; vertical-align: top;
+}
+table.uebersicht th {
+  background: var(--flaeche-2); font-family: var(--schrift-daten); font-size: var(--t-xs);
+  font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-2);
+}
+table.uebersicht td.zahl { font-family: var(--schrift-daten); white-space: nowrap; width: 1%; }
+table.uebersicht tr.mit-fehler td { background: var(--alarm-fond); }
+table.uebersicht td.inhalt { min-width: 16rem; }
+
+/* ---- Fußzeile ---------------------------------------------------- */
+footer.seite {
+  width: 100%; max-width: var(--satzspiegel); align-self: center; margin: auto 0 0;
+  padding: var(--r-5) min(var(--r-4), 18px) var(--r-6);
+  display: flex; flex-direction: column; gap: var(--r-4);
+  border-top: var(--strich) solid var(--linie); font-size: var(--t-s); color: var(--text-2);
+}
+.fuss-gruppen { display: grid; gap: var(--r-4) var(--r-5); grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+.fuss-gruppe { display: flex; flex-direction: column; align-items: flex-start; gap: var(--r-2); }
+.fuss-gruppe a {
+  display: inline-flex; align-items: center; min-height: calc(var(--ziel-basis) + var(--ziel));
+  color: var(--text); text-decoration: underline; text-decoration-color: var(--linie); text-underline-offset: 0.2em;
+}
+@media (hover: hover) { .fuss-gruppe a:hover { color: var(--akzent); text-decoration-color: currentColor; } }
+.fuss-titel {
+  font-family: var(--schrift-daten); font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-2);
+}
+.fuss-marke { margin: 0; }
+
+/* ---- Feld-Modus: hoher Kontrast, 48-px-Ziele --------------------- */
+.feld-modus {
+  font-size: 112%;
+  --grund:       #e8eaef;
+  --flaeche:     #ffffff;
+  --flaeche-2:   #dfe3ea;
+  --text:        #000000;
+  --text-2:      #262b36;
+  --text-3:      #262b36;
+  --linie-fein:  #111318;
+  --linie:       #111318;
+  --linie-stark: #111318;
+  --strich:       2px;
+  --strich-stark: 2px;
+  --fokus:        4px;
+  --ziel:         0.25rem;
+  --t-xs: 0.875rem;
+  --t-s:  0.9375rem;
+}
+.feld-modus label.feld { color: var(--text); font-weight: 700; }
+.feld-modus input[type="checkbox"], .feld-modus input[type="radio"] { width: 1.7rem; height: 1.7rem; }
+
+/* ---- Dunkel-Modus ------------------------------------------------ */
+.dunkel-modus {
+  color-scheme: dark;
+  --grund:       #0f1116;
+  --flaeche:     #171a21;
+  --flaeche-2:   #21252e;
+  --text:        #e7eaf1;
+  --text-2:      #aab2c2;
+  --text-3:      #848da0;
+  --linie-fein:  #272c36;
+  --linie:       #4a5262;
+  --linie-stark: #676f80;
+  --akzent:      #a8bdf2;
+  --akzent-hell: #c6d4f8;
+  --auf-akzent:  #101a33;
+  --gut:         #6cd18a;
+  --gut-fond:    #16261d;
+  --gut-linie:   #2f5340;
+  --alarm:       #ff9d94;
+  --alarm-fond:  #2a1715;
+  --alarm-linie: #5c2a24;
+  --warn-text:   #f0cf88;
+  --warn-fond:   #2a2416;
+  --warn-linie:  #6b5a2c;
+  --kopf-fond:   #12275e;
+  --kopf-auf:    #ffffff;
+  --kopf-kante-farbe: rgba(0, 0, 0, 0.5);
+  --vorschau-fond: #2a2d33;
+}
+
+/* ---- Nacht-Modus: warm gedimmt, schont die Dunkeladaption -------- */
+.nacht-modus {
+  color-scheme: dark;
+  --grund:       #0d0c08;
+  --flaeche:     #17150f;
+  --flaeche-2:   #221f16;
+  --text:        #d9cdb6;
+  --text-2:      #a2977e;
+  --text-3:      #958972;
+  --linie-fein:  #2b271d;
+  --linie:       #575039;
+  --linie-stark: #746a51;
+  --akzent:      #a8791a;
+  --akzent-hell: #c9932c;
+  --auf-akzent:  #100d07;
+  --gut:         #8fae63;
+  --gut-fond:    #1d241a;
+  --gut-linie:   #40523a;
+  --alarm:       #e08a7e;
+  --alarm-fond:  #291410;
+  --alarm-linie: #5e2f26;
+  --warn-text:   #d9b96a;
+  --warn-fond:   #2a2415;
+  --warn-linie:  #6b501c;
+  --kopf-fond:  #221f16;
+  --kopf-auf:   #d9cdb6;
+  --kopf-auf-2: #a2977e;
+  --kopf-linie: #423c2d;
+  --kopf-kante-farbe: rgba(0, 0, 0, 0.6);
+  --vorschau-fond: #17150f;
+}
+/* Das weiße Formular in der Vorschau wäre nachts die hellste Fläche im Bild. */
+/* Abdunkeln allein lässt ein helles Blatt; umgekehrt sind die Linien hell auf dunklem Grund. */
+.dunkel-modus .vorschau iframe, .dunkel-modus .bildvorschau { filter: invert(0.9) hue-rotate(180deg); }
+.nacht-modus .vorschau iframe, .nacht-modus .bildvorschau { filter: invert(0.92) sepia(0.7) brightness(0.75); }
+.dunkel-modus body, .nacht-modus body { letter-spacing: 0.006em; line-height: 1.55; }
+/* Nachts ist man meist draußen: die großen Tippziele des Feld-Modus gelten mit. */
+.nacht-modus { --ziel: 0.25rem; }
+/* Der Primärknopf wäre sonst die hellste Fläche im Bild. */
+/* Nachts ohne Helligkeitsfilter: Er senkte den Kontrast der Schrift auf etwa 3,9:1, ohne Filter rund 5:1. */
+.nacht-modus button.primaer { filter: none; }
+.nacht-modus input[type="checkbox"], .nacht-modus input[type="radio"] { width: 1.7rem; height: 1.7rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dauer-1: 0ms; }
+}
+
+/* ---- Rechtsseiten ------------------------------------------------ */
+.zur-app {
+  flex: 1 1 auto; display: inline-flex; align-items: center;
+  min-height: calc(var(--ziel-basis) + var(--ziel));
+  color: var(--kopf-auf); font-weight: 600; text-decoration: none;
+}
+@media (hover: hover) { .zur-app:hover { text-decoration: underline; } }
+.zur-app:focus-visible { outline-color: var(--kopf-auf); }
+.rechtstext h1 { margin: var(--r-2) 0 var(--r-5); }
+.rechtstext h2 { font-size: var(--t-l); margin: var(--r-5) 0 var(--r-2); }
+.rechtstext p { max-width: 68ch; }
+.rechtstext a { color: var(--akzent-hell); }
+/* Kopf, Text und Fußzeile mit derselben linken Kante. */
+.textseite { --satzspiegel: 44rem; }
+
+/* Alle Werkzeuge in einer Zeile ganz unten, durch Punkte getrennt. */
+.werkzeuge {
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--r-3); row-gap: var(--r-2);
+  padding-top: var(--r-3); border-top: var(--strich) solid var(--linie-fein);
+}
+/* Externe Ziele verlassen die App: mit Pfeil gekennzeichnet. */
+.werkzeuge a::after { content: " ↗"; text-decoration: none; }
+.werkzeuge a {
+  display: inline-flex; align-items: center; min-height: calc(var(--ziel-basis) + var(--ziel));
+  color: var(--text-2); font-family: var(--schrift-daten); font-size: var(--t-xs);
+  text-decoration: underline; text-decoration-color: var(--linie); text-underline-offset: 0.2em;
+}
+.werkzeuge span { color: var(--text-3); }
+@media (hover: hover) { .werkzeuge a:hover { color: var(--akzent); text-decoration-color: currentColor; } }
+
+/* ---- Übersichten am Telefon: jede Zeile als Karte ----------------- */
+@media (max-width: 40rem) {
+  table.uebersicht thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  table.uebersicht, table.uebersicht tbody, table.uebersicht tr, table.uebersicht td { display: block; width: 100%; }
+  /* Zwei Spalten je Karte: kurze Werte nebeneinander, Gegenstelle und Inhalt über die volle Breite. */
+  table.uebersicht tr { display: grid; grid-template-columns: 1fr 1fr; border: var(--strich) solid var(--linie); margin-bottom: var(--r-2); padding: var(--r-1) 0; }
+  table.uebersicht td { border: none; display: block; width: auto; padding: 0.15rem 0.5rem; }
+  table.uebersicht td::before { content: attr(data-beschriftung); display: block; font-family: var(--schrift); font-size: var(--t-xs); font-weight: 600; font-style: normal; letter-spacing: 0; color: var(--text-2); }
+  table.uebersicht td.inhalt, table.uebersicht td[data-beschriftung="Gegenstelle"], table.uebersicht td[data-beschriftung="Absender"] { grid-column: 1 / -1; min-width: 0; }
+  table.uebersicht td:empty { display: none; }
+}
+
+/* ---- Rückfrage ---------------------------------------------------- */
+dialog.frage {
+  max-width: min(28rem, calc(100vw - 2rem)); padding: var(--r-4);
+  color: var(--text); background: var(--flaeche); border: var(--strich-stark) solid var(--linie-stark);
+}
+dialog.frage::backdrop { background: rgba(0, 0, 0, 0.55); }
+dialog.frage p { margin: 0 0 var(--r-3); white-space: pre-line; }
+dialog.frage .aktionen { margin-top: 0; }
+
+/* Sprungziele nicht an den oberen Rand kleben. */
+#vorschau-titel, #abschluss { scroll-margin-top: var(--r-4); }
+
+/* Fehlerkarte am Telefon: kräftiger Rand, nicht nur Tönung; Zahlenzellen voll breit. */
+table.uebersicht tr.mit-fehler td:first-child { box-shadow: inset 6px 0 0 var(--alarm); }
+@media (max-width: 40rem) {
+  table.uebersicht tr.mit-fehler { border-left: 6px solid var(--alarm); }
+  table.uebersicht tr.mit-fehler td:first-child { box-shadow: none; }
+}
+@media (max-width: 40rem) {
+  table.uebersicht td.zahl { width: auto; }
+}
+
+/* ---- Nacht und Dunkel: Feinschliff --------------------------------- */
+.nacht-modus { --strich: 2px; --strich-stark: 2px; }
+.nacht-modus button:disabled, .dunkel-modus button:disabled { opacity: 0.92; }
+/* Auch Nebenknöpfe gesperrt an der Form erkennbar: gestrichelt und gedämpft. */
+.nacht-modus button:disabled:not(.primaer):not(.link):not(.arbeitet),
+.dunkel-modus button:disabled:not(.primaer):not(.link):not(.arbeitet) { border-style: dashed; color: var(--text-2); }
+/* Deaktiviert im Dunkeln an der Form erkennbar, nicht nur an der Helligkeit: gestrichelter Rahmen statt Fläche. */
+.nacht-modus button.primaer:disabled, .dunkel-modus button.primaer:disabled {
+  filter: none; background: none; color: var(--text-2); border: 2px dashed var(--linie-stark);
+}
+.nacht-modus .karte, .dunkel-modus .karte { border-color: var(--linie-stark); }
+.dunkel-modus button.primaer { filter: brightness(0.85); }
+/* Die Sprungleiste steht dauernd im Bild: im Dunkeln als Rahmenknopf statt heller Fläche. */
+.nacht-modus .sprungleiste button.primaer, .dunkel-modus .sprungleiste button.primaer,
+.nacht-modus .sprung-quer, .dunkel-modus .sprung-quer {
+  background: var(--flaeche); color: var(--akzent-hell); border-color: var(--akzent); filter: none;
+}
+
+/* Hinweise vor dem Download: eine Zeile je Hinweis, was falsch gedruckt würde, zuerst und fett. */
+#einzeln-hinweise ul { margin: 0; padding-left: 1.2rem; }
+#einzeln-hinweise li + li { margin-top: var(--r-1); }
+#einzeln-hinweise li.wichtig { font-weight: 700; }
+#entwurf-text .nebentext { display: block; margin-top: var(--r-1); font-weight: 400; }
+
+/* Vermerke: der zur Richtung gehörende ist hervorgehoben, die anderen treten zurück. */
+.vermerk { padding-left: var(--r-3); border-left: 4px solid transparent; }
+#weitere[data-richtung="Eingang"] .vermerk[data-vermerk="aufnahme"],
+#weitere[data-richtung="Ausgang"] .vermerk[data-vermerk="annahme"],
+#weitere[data-richtung="Ausgang"] .vermerk[data-vermerk="befoerderung"] { border-left-color: var(--akzent); }
+#weitere[data-richtung="Eingang"] .vermerk:not([data-vermerk="aufnahme"]) h4::after,
+#weitere[data-richtung="Ausgang"] .vermerk[data-vermerk="aufnahme"] h4::after { content: " – gehört nicht zu dieser Richtung"; font-weight: 400; color: var(--text-3); }
+dialog.frage .aktionen { gap: var(--r-4); }
+/* Wiederkehrend am Telefon: der grüne Kasten nur einzeilig, die Maske rückt nach oben. */
+@media (max-width: 40rem) {
+  .wiederkehrend .offline-badge { font-size: var(--t-xs); padding-block: var(--r-1); margin-bottom: var(--r-3); }
+  .wiederkehrend .offline-badge #offline-stand { display: none; }
+}
+/* PDF-Rahmen, der nur zum Drucken geladen bleibt, während die Bildvorschau zu sehen ist. */
+iframe.nur-zum-drucken { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* Löschen ist kein gewöhnlicher Knopf: roter Rand und Schrift. */
+button.gefahr { color: var(--alarm); border-color: var(--alarm); }
+/* Mindestens 16 px zwischen „Leere Vordrucke“ und „Erstellte Vordrucke“, auch nach einem Download. */
+.abschluss .leere-zeile { margin-bottom: var(--r-5); }
+.abschluss .leere-zeile + .verlauf { margin-top: var(--r-5); }
+/* Excel- und CSV-Vorlage nebeneinander mit demselben Abstand wie die übrigen Knopfpaare. */
+.karten-paar .aktionen { gap: var(--r-4); }
+/* Prüfübersicht beim Meldevordruck: nur, was er druckt. */
+table.uebersicht.meldung .nur-nachricht { display: none; }
+.nur-mobil { display: none; }
+@media (max-width: 40rem) {
+  .nur-mobil { display: block; }
+  table.uebersicht.nur-auffaellige tbody tr:not(.auffaellig) { display: none; }
+}
+/* Ablage nicht erstellter Vordrucke: deutlich abgesetzt vom Zurücknehmen darüber. */
+.ablage { margin-top: var(--r-4); }
+.ablage p { margin: 0 0 var(--r-2); }
+/* Einträge mit Abstand: zehn gleich aussehende Links sollen nicht ineinander laufen. */
+.ablage ul { margin: 0; padding-left: 1.2rem; }
+.ablage li + li { margin-top: var(--r-3); }
+.ablage details[open] > summary { margin-bottom: var(--r-3); }
+.ablage summary { min-height: calc(var(--ziel-basis) + var(--ziel)); display: flex; align-items: center; cursor: pointer; }
+/* Rückmeldung und Rückweg über der Maske: dort, wo nach „Nächster Vordruck“ der Blick ist. */
+.oben-zuruecknahme { margin: 0 0 var(--r-3); padding: var(--r-2) var(--r-3); border-left: 4px solid var(--akzent); background: var(--flaeche); font-size: var(--t-s); }
+.oben-zuruecknahme button.link, .oben-ablage button.link, .ablage button.link { min-height: calc(var(--ziel-basis) + var(--ziel)); text-align: left; justify-content: flex-start; }
+.oben-ablage { margin: 0 0 var(--r-3); }
+/* Nach „Stehen gebliebene leeren“: geleerte Felder markiert, bis dort getippt wird. */
+.geleert { outline: 3px dashed var(--akzent); outline-offset: 3px; }
+/* Tabellenweg: Download und Vorschau mit Abstand wie im Einzelweg. */
+.ergebnis .aktionen { gap: var(--r-4); }
+@media (max-width: 40rem) { .modus-erklaerung:not(.gewechselt) { display: none; } }
+/* Ein Vordruck ohne Text hat nichts zu prüfen: Die Leiste verdeckt dann nur die Felder darüber. */
+.maske.ohne-text .sprungleiste { visibility: hidden; pointer-events: none; }
+/* Einsatzgrenze über der Liste, abgesetzt von ihr. */
+.einsatz { margin: var(--r-3) 0 var(--r-4); padding-left: var(--r-3); border-left: 4px solid var(--linie-stark); }
+.einsatz .aktionen { margin-top: var(--r-2); gap: var(--r-5); }
+#einsatz-aufheben { margin-top: var(--r-3); }
+/* Gelöschte Liste: zwischen Wiederherstellen und Endgültig verwerfen mindestens 24 px. */
+.geloescht-knoepfe { display: flex; flex-wrap: wrap; gap: var(--r-2) var(--r-5); }
+.geloescht-knoepfe button.link { min-height: calc(var(--ziel-basis) + var(--ziel)); }
+/* Trennzeile in der Liste erstellter Vordrucke: hier beginnt ein anderer Einsatz. */
+table.uebersicht tr.einsatz-trenner td { font-weight: 700; color: var(--text-2); border-top: 3px solid var(--linie-stark); background: var(--flaeche-2); }
+/* Meldung zu einer eben getippten Wahl (Richtung, Einsatz): deutlich vom festen Erklärtext darüber abgesetzt. */
+.hinweis.wichtig, .nebentext.wichtig { color: var(--text); font-weight: 700; font-size: var(--t-s); border-left: 4px solid var(--akzent); padding-left: var(--r-2); }
+/* Trennzeile in der Liste: am Telefon über die ganze Breite der Karten, nicht in ihrem Raster. */
+@media (max-width: 40rem) {
+  table.uebersicht tr.einsatz-trenner { display: block; width: 100%; padding: var(--r-2) 0; border-left: none; border-right: none; background: var(--flaeche-2); }
+  table.uebersicht tr.einsatz-trenner td { display: block; width: 100%; padding: 0.15rem 0.5rem; }
+  table.uebersicht tr.einsatz-trenner td::before { content: none; }
+}
+
+/* Der Tipp kam zu früh: Die Rückfrage sagt es selbst, ein Tipp ins Leere wäre sonst rätselhaft. */
+/* Über dem Text statt zwischen Text und Knöpfen: Nichts darunter verrutscht, der zweite Tipp trifft denselben Knopf. */
+/* Hohe Rückfragen (Feld-Modus, Querformat): Der Text rollt, die Knöpfe bleiben im Dialog und im Bild. */
+dialog.frage { position: fixed; max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); overflow: hidden; }
+dialog.frage[open] { display: flex; flex-direction: column; }
+dialog.frage form { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+dialog.frage #frage-text { overflow-y: auto; min-height: 2.5rem; flex: 1 1 auto; }
+dialog.frage .aktionen { flex: none; }
+dialog.frage p.frage-hinweis { pointer-events: none; position: absolute; top: 0; left: 0; right: 0; margin: 0; z-index: 2; font-size: var(--t-s); font-weight: 700; padding: var(--r-3); background: var(--flaeche); color: var(--text); border-left: 6px solid var(--akzent); border-bottom: var(--strich) solid var(--linie-stark); }
+dialog.frage p.frage-hinweis[hidden] { display: none; }
+/* „Neuer Einsatz“ ist der folgenreichere der beiden Knöpfe: fett und mit kräftigerem Rand. */
+#einsatz-neu { font-weight: 700; border-width: 2px; }
+/* Der gesperrte Zurücknehmen-Knopf bleibt tippbar (um den Tipp zu melden) und sieht wie ein deaktivierter aus. */
+button.gesperrt { opacity: 0.8; border-style: dashed; cursor: default; }
+.nacht-modus button.gesperrt, .dunkel-modus button.gesperrt { opacity: 0.92; }
+.nacht-modus button.gesperrt:not(.primaer):not(.link):not(.arbeitet),
+.dunkel-modus button.gesperrt:not(.primaer):not(.link):not(.arbeitet) { border-style: dashed; color: var(--text-2); }
+/* Die Überschrift bricht um, statt bei 320 px (Feld-Modus) über den Rand zu ragen. */
+h1 { overflow-wrap: anywhere; }
+.einleitung[hidden] { display: none; }
+/* Die Speicherwarnung bleibt beim Scrollen oben im Bild: Sonst sieht sie nicht, wer weiter unten tippt. */
+#oben-hinweise { position: sticky; top: 0; z-index: 5; }
+#oben-hinweise[hidden] { display: none; }
+#speicher-warnung, #fenster-hinweis { font-weight: 700; font-size: var(--t-s); line-height: 1.3; padding-block: var(--r-2); padding-inline: var(--r-3); margin-bottom: var(--r-2); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); }
+#speicher-warnung[hidden] { display: none; }
+.speicher-defekt #offline-stand { display: none; }
+.kurzmeldung.oben { bottom: auto !important; }
+@media (max-width: 22rem) { h1 { font-size: 1.3rem; } }
+
+/* Der Hinweis auf ein zweites Fenster: kompakt, mit Knöpfen, ohne den Text darunter zu verdecken (der Container klebt oben). */
+#fenster-hinweis { font-size: var(--t-s); line-height: 1.3; padding-block: var(--r-2); padding-inline: var(--r-3); margin-bottom: var(--r-2); }
+#fenster-hinweis[hidden] { display: none; }
+#fenster-hinweis p { margin: 0 0 var(--r-2); }
+#fenster-hinweis .aktionen { margin-top: 0; gap: var(--r-3); display: grid; grid-template-columns: 1fr 1fr; }
+#fenster-hinweis .aktionen button { width: 100%; min-width: 0; margin: 0; }
+/* Niedrige Bilder (Tastatur, Querformat): Der Bereich klebt weiter, aber ist eine Zeile mit zwei Knöpfen: Wer tippt, sieht ihn sonst nie. */
+@media (max-height: 36rem) {
+  #fenster-hinweis { padding-block: 2px; margin-bottom: 2px; }
+  #fenster-hinweis p { margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
+  #fenster-hinweis .aktionen button { min-height: 2.75rem; padding-block: 0; font-size: 0.85rem; }
+  #speicher-warnung { font-size: 0.8rem; padding-block: 2px; margin-bottom: 2px; }
+}
+/* Nach der Speicherwarnung: die Kurzmeldung oben liegt darunter, nicht darüber. */
+.kurzmeldung.oben { top: calc(var(--warnhoehe, 0px) + var(--r-2)); }
+@media (max-height: 30rem) { #speicher-warnung { font-size: 0.8rem; padding-block: 2px; } }
