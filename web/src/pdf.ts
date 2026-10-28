@@ -3,7 +3,7 @@ import { zeichneEinsatzauftrag, type EinsatzauftragOptionen } from "../../src/in
 import { zuDaten, type Werte } from "./felder.js";
 
 /** Herkunftszeile am Blattrand jedes Auftrags, den diese App erzeugt. */
-export const HERKUNFT = "Erstellt mit github.com/wattnpapa/einsatzauftrag";
+export const HERKUNFT = "Erstellt mit einsatzauftrag.de";
 
 export interface Ergebnis {
     pdf: jsPDF;

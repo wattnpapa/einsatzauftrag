@@ -10,7 +10,7 @@ describe("erzeugePdf", () => {
         expect(seiten[1]).toBeGreaterThan(1);
         expect(seiten[2]).toBe(1);
         expect(pdf.getNumberOfPages()).toBe(seiten.reduce((a, b) => a + b, 0));
-        expect(pdf.output()).toContain("Erstellt mit github.com/wattnpapa/einsatzauftrag".slice(0, 20));
+        expect(pdf.output()).toContain(HERKUNFT);
     });
 
     it("lässt die Fußzeile über die Optionen ändern", () => {
