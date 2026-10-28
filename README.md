@@ -8,14 +8,14 @@ Gegenüber dem Word-Formular hat Abschnitt 4 auch die Zeile 4d (Instandsetzung),
 
 ## Web-App
 
-Unter `web/` liegt eine Web-App für GitHub Pages. Sie füllt einen einzelnen Einsatzauftrag über eine Eingabemaske mit Live-Vorschau aus oder erzeugt viele auf einmal aus einer Excel- oder CSV-Tabelle (eine Zeile je Auftrag). Excel- und CSV-Vorlage gibt es dort zum Herunterladen. Alles läuft im Browser, nichts wird hochgeladen; nach dem ersten Aufruf startet die App auch ohne Netz.
+Unter `web/` liegt eine Web-App, veröffentlicht unter [einsatzauftrag.de](https://einsatzauftrag.de/) über GitHub Pages. Sie füllt einen einzelnen Einsatzauftrag über eine Eingabemaske mit Live-Vorschau aus oder erzeugt viele auf einmal aus einer Excel- oder CSV-Tabelle (eine Zeile je Auftrag). Excel- und CSV-Vorlage gibt es dort zum Herunterladen. Alles läuft im Browser, nichts wird hochgeladen; nach dem ersten Aufruf startet die App auch ohne Netz.
 
 ```bash
 npm run web          # Entwicklungsserver
 npm run web:build    # dist-web/
 ```
 
-Der Workflow `.github/workflows/pages.yml` baut die App bei jedem Push auf `main` und veröffentlicht sie. Einmalig in den Repository-Einstellungen unter Pages als Quelle „GitHub Actions“ wählen.
+Der Workflow `.github/workflows/pages.yml` baut die App bei jedem Push auf `main` und veröffentlicht sie. Einmalig in den Repository-Einstellungen unter Pages als Quelle „GitHub Actions“ wählen; dort ist auch die Domain einsatzauftrag.de eingetragen. Die App nutzt relative Pfade und läuft unter der Domain wie unter `wattnpapa.github.io/einsatzauftrag/`.
 
 ## Verwendung als Bibliothek
 
