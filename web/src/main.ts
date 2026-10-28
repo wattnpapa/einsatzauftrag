@@ -404,6 +404,9 @@ maske.addEventListener("submit", ereignis => ereignis.preventDefault());
 /** Nur zum Messen der Textbreiten; gezeichnet wird in eine eigene PDF. */
 const messPdf = new jsPDF({ unit: "mm", format: "a4" });
 let vorschauUhr: ReturnType<typeof setTimeout> | undefined;
+const VORSCHAU = "ea.vorschau.v1";
+/** Ausgeblendet wird nur das Bild; Seitenzahl und Seitenhinweis rechnet der Satz weiter. */
+let vorschauSichtbar = lies<boolean>(VORSCHAU) !== false;
 
 function vorschauBald(): void {
     clearTimeout(vorschauUhr);
@@ -412,7 +415,9 @@ function vorschauBald(): void {
 
 function vorschauJetzt(): void {
     const satz = setzeEinsatzauftrag(messPdf, zuDaten(werteDerMaske()), { fusszeile: HERKUNFT, ...optionen() });
-    zeigeSeiten(el("vorschau-seiten"), satz.seiten);
+    if (vorschauSichtbar) {
+        zeigeSeiten(el("vorschau-seiten"), satz.seiten);
+    }
     const seiten = satz.seiten.length;
     el("vorschau-stand").textContent = `${seiten === 1 ? "1 Seite" : `${seiten} Seiten`}, Schrift ${String(satz.schriftgroesse).replace(".", ",")} pt`;
     const hinweis = el("seiten-hinweis");
@@ -509,7 +514,32 @@ maske.addEventListener("click", ereignis => {
 });
 
 el("zur-vorschau").addEventListener("click", () => {
-    el("vorschau").scrollIntoView({ behavior: "smooth", block: "start" });
+    el(vorschauSichtbar ? "vorschau" : "abschluss").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+/** Ohne Vorschau nimmt die Maske die ganze Breite; die Textfelder werden dabei niedriger. */
+function zeigeVorschauSchalter(): void {
+    el("ansicht-einzeln").querySelector(".arbeitsflaeche")?.classList.toggle("ohne-vorschau", !vorschauSichtbar);
+    el("vorschau-inhalt").hidden = !vorschauSichtbar;
+    const schalter = el("vorschau-schalter");
+    schalter.textContent = vorschauSichtbar ? "Vorschau ausblenden" : "Vorschau einblenden";
+    schalter.setAttribute("aria-expanded", String(vorschauSichtbar));
+    for (const steuer of steuerelemente()) {
+        if (steuer instanceof HTMLTextAreaElement) {
+            anpassen(steuer);
+        }
+    }
+}
+
+el("vorschau-schalter").addEventListener("click", () => {
+    vorschauSichtbar = !vorschauSichtbar;
+    merke(VORSCHAU, vorschauSichtbar ? undefined : false);
+    zeigeVorschauSchalter();
+    if (vorschauSichtbar) {
+        vorschauJetzt();
+    } else {
+        el("vorschau-seiten").replaceChildren();
+    }
 });
 
 // ---- Reiter -----------------------------------------------------------------------
@@ -689,11 +719,7 @@ if (entwurf?.werte && hatInhalt(entwurf.werte)) {
     el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt.`;
 }
 vorschauJetzt();
-for (const steuer of steuerelemente()) {
-    if (steuer instanceof HTMLTextAreaElement) {
-        anpassen(steuer);
-    }
-}
+zeigeVorschauSchalter();
 el("fassung").textContent = `Fassung ${__FASSUNG__}.`;
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {

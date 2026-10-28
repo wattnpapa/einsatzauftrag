@@ -354,7 +354,14 @@ summary .stand { font-size: var(--t-s); font-weight: 400; color: var(--text-2); 
   .vorschau { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: var(--r-4); }
   /* Neben dem Formular ganz sichtbar bleiben, auch mit zwei Vordrucken untereinander. */
   .vorschau .bildvorschau { width: auto; max-width: 100%; max-height: calc(100vh - 9rem); margin-inline: auto; }
+  /* Vorschau aus: Maske über die ganze Breite, der Schalter zum Einblenden steht darüber. */
+  .arbeitsflaeche.ohne-vorschau { grid-template-columns: minmax(0, 1fr); }
+  .ohne-vorschau > .vorschau { grid-column: 1; grid-row: 1; position: static; }
+  .ohne-vorschau > .maske { grid-row: 2; }
+  .ohne-vorschau > .abschluss { grid-row: 3; }
 }
+.ohne-vorschau > .vorschau { margin-bottom: var(--r-4); }
+.vorschau-schalter { margin-left: auto; }
 .abschluss .aktionen { margin-top: 0; margin-bottom: var(--r-2); gap: var(--r-4); }
 /* „Felder leeren“ mit Abstand zu „PDF herunterladen“: kein Fehlgriff mit Handschuh. */
 .aktionen > .abgesetzt { margin-left: var(--r-4); }
