@@ -3,7 +3,7 @@ import { zeichneEinsatzauftrag, type EinsatzauftragOptionen } from "../../src/in
 import { zuDaten, type Werte } from "./felder.js";
 
 /** Herkunftszeile am Blattrand jedes Auftrags, den diese App erzeugt. */
-export const HERKUNFT = "Erstellt mit einsatzauftrag.de";
+export const HERKUNFT = "Erstellt mit einsatzauftrag.app";
 
 export interface Ergebnis {
     pdf: jsPDF;
