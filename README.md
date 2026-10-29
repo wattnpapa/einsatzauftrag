@@ -6,9 +6,17 @@ Die Zeilen wachsen mit ihrem Text. Ohne feste Schriftgröße probiert der Satz 1
 
 Gegenüber dem Word-Formular hat Abschnitt 4 auch die Zeile 4d (Instandsetzung), die dort in der Kopfzeile genannt ist, aber als Zeile fehlt. Das THW-Zeichen ist nicht enthalten; rechts im Kopf steht „Technisches Hilfswerk“ als Text, ein eigenes Logo lässt sich als Bild einsetzen.
 
+## Gestaltung „allgemein“
+
+Kommt der Auftrag von einer Stelle außerhalb des THW, passt der Vordruck oft nicht. Die Gestaltung `allgemein` setzt dasselbe Blatt ohne Vordruck: kein Kasten, keine Farbflächen, schwarzer Text und eine Leitfarbe (Rot, auf Wunsch Schwarz) für Titel, Linien und Abschnittsnummern. Gegliedert ist es in Absender, Empfänger, Einsatz und lfd. Nr., dann die fünf Abschnitte Lage, Auftrag, Durchführung, Logistik, Führung und Verbindung als Freitext (`lage`, `auftrag`, `durchfuehrung`, `logistik`, `fuehrung`), zuletzt Ort/Datum, Unterschrift und Dienststelle. Die Unterzeilen 1a bis 4g gibt es dort nicht; sind sie trotzdem gefüllt (etwa aus einer THW-Tabelle), stehen sie mit ihrer Kennung unter dem Freitext. Umgekehrt setzt der Vordruck gefüllte Freitexte als Zeile ohne Kennung vor 1a, 3a und 4a. Schriftverkleinerung und Fortsetzungsseiten funktionieren wie beim Vordruck.
+
+Als Schrift lässt sich eine eigene TrueType-Schrift einbetten, etwa Aptos. Aptos gehört Microsoft und liegt nicht im Repository; wer sie hat (Microsoft 365, Windows), übergibt die Dateien als Base64 in `schriftart`. Ohne Angabe bleibt es bei Helvetica.
+
 ## Web-App
 
 Unter `web/` liegt eine Web-App, veröffentlicht unter [einsatzauftrag.app](https://einsatzauftrag.app/) über GitHub Pages. Sie füllt einen einzelnen Einsatzauftrag über eine Eingabemaske mit Live-Vorschau aus oder erzeugt viele auf einmal aus einer Excel- oder CSV-Tabelle (eine Zeile je Auftrag). Excel- und CSV-Vorlage gibt es dort zum Herunterladen. Alles läuft im Browser, nichts wird hochgeladen; nach dem ersten Aufruf startet die App auch ohne Netz.
+
+Unter „Gestaltung und Kopf“ wählt man zwischen dem THW-Vordruck und der allgemeinen Gestaltung. Die Maske zeigt dann nur die Felder der gewählten Gestaltung, die Vorlagen bekommen die passenden Spalten; eingelesen werden immer alle. Für die allgemeine Gestaltung lassen sich die Leitfarbe (Rot oder Schwarz) und die TTF-Dateien einer eigenen Schrift wie Aptos wählen; Schrift und Logo bleiben im Browser des Geräts.
 
 ```bash
 npm run web          # Entwicklungsserver
@@ -48,12 +56,33 @@ Die erste Seite landet auf der aktuellen Seite der PDF, weitere werden angehäng
 
 | Option | Wirkung |
 | --- | --- |
-| `kennung` | Text im linken Kopffeld, Standard „Fb Fü 3“ |
-| `titel` | Text im blauen Balken, Standard „Einsatzauftrag“ |
-| `organisation` | Text im rechten Kopffeld, Zeilen mit `\n`, Standard „Technisches\nHilfswerk“ |
+| `gestaltung` | `"vordruck"` (Fb Fü 3, Standard) oder `"allgemein"` |
+| `kennung` | Text im linken Kopffeld, Standard „Fb Fü 3“; allgemein nur, wenn angegeben, klein unter dem Titel |
+| `titel` | Text im blauen Balken bzw. Titel des Blatts, Standard „Einsatzauftrag“ |
+| `organisation` | Text im rechten Kopffeld, Zeilen mit `\n`, Standard „Technisches\nHilfswerk“ (allgemein: leer) |
 | `logo` | `{ daten, format: "PNG" \| "JPEG", breite, hoehe }`, rechts im Kopf |
 | `schriftgroesse` | feste Schriftgröße der Eintragungen in pt statt der automatischen Wahl |
+| `schriftart` | `{ name, normal, fett? }`, TrueType-Dateien als Base64, etwa Aptos; wird je PDF eingebettet |
+| `leitfarbe` | Hex-Farbe der Gestaltung „allgemein“, Standard Rot `#c8102e`; `#000000` für ein Blatt ohne Farbe |
 | `fusszeile` | kleiner Text links unten am Blattrand |
+
+```ts
+const satz = zeichneEinsatzauftrag(pdf, {
+    absender: "Kreisfeuerwehr Oldenburg, Einsatzleitung",
+    empfaenger: "THW OV Oldenburg, 1. TZ",
+    lage: "Pegel Hunte 5,80 m, steigend.",
+    auftrag: "Deichabschnitt km 4,2 bis 4,6 sichern.",
+    durchfuehrung: "Sandsackverbau, Ausleuchtung der Deichkrone.",
+    logistik: "Sandsäcke über den Bauhof.",
+    fuehrung: "Einsatzleitung Gerätehaus Kreyenbrück"
+}, {
+    gestaltung: "allgemein",
+    organisation: "Landkreis Oldenburg\nKatastrophenschutz",
+    schriftart: { name: "Aptos", normal: aptosBase64, fett: aptosBoldBase64 }
+});
+```
+
+Wer `zeichneSeite` auf einer anderen `jsPDF`-Instanz nutzt als der, mit der gesetzt wurde, ruft dort vorher `registriereSchrift(pdf, schriftart)` auf; jsPDF kennt eingebettete Schriften nur je Dokument.
 
 ## Entwicklung
 

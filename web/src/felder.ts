@@ -1,11 +1,13 @@
-import { ABSCHNITTE, UNTERPUNKTE, type EinsatzauftragDaten, type Unterpunkt } from "../../src/index.js";
+import { ABSCHNITTE, UNTERPUNKTE, type EinsatzauftragDaten, type Gestaltung, type Unterpunkt } from "../../src/index.js";
 
 // Die Felder der Eingabemaske und die Spalten der Tabelle: eine Liste für
 // beides, damit Maske, Excel-Vorlage und Einlesen nicht auseinanderlaufen.
+// Der Vordruck (THW) und die allgemeine Gestaltung zeigen verschiedene
+// Teilmengen; eingelesen werden immer alle Spalten.
 
 export type Feldschluessel =
     | "absender" | "einsatz" | "laufendeNummer" | "empfaenger"
-    | Unterpunkt | "auftrag" | "fuehrung"
+    | "lage" | Unterpunkt | "auftrag" | "durchfuehrung" | "logistik" | "fuehrung"
     | "ortDatum" | "unterschrift" | "dienststelle"
     | "abgesandtAm" | "abgesandtUm" | "abgesandtVon";
 
@@ -21,6 +23,8 @@ export interface Feld {
     readonly mehrzeilig?: boolean;
     /** Spaltenbreite in der Excel-Vorlage. */
     readonly breite: number;
+    /** Nur in dieser Gestaltung in Maske und Vorlage; ohne Angabe in beiden. */
+    readonly nur?: Gestaltung;
 }
 
 const BEISPIELE: Record<Unterpunkt, string> = {
@@ -49,7 +53,25 @@ function unterpunktFeld(kennung: Unterpunkt): Feld {
         beispiel: BEISPIELE[kennung],
         auch: [kennung, `${abschnitt?.titel ?? ""} ${kennung}`],
         mehrzeilig: true,
-        breite: 36
+        breite: 36,
+        nur: "vordruck"
+    };
+}
+
+/** Freitext eines Abschnitts, in der allgemeinen Gestaltung das einzige Feld des Abschnitts. */
+function freitextFeld(schluessel: "lage" | "durchfuehrung" | "logistik", beispiel: string, beschreibung: string): Feld {
+    const abschnitt = ABSCHNITTE.find(eintrag => eintrag.freitext === schluessel);
+    const nummer = abschnitt?.nummer ?? 0;
+    const titel = abschnitt?.titel ?? "";
+    return {
+        schluessel,
+        titel: `${nummer} ${titel}`,
+        beschreibung: `${nummer}. ${titel}: ${beschreibung} Im Vordruck Fb Fü 3 steht der Text als Zeile ohne Kennung vor ${abschnitt?.unterpunkte[0]?.kennung ?? ""}.`,
+        beispiel,
+        auch: [titel],
+        mehrzeilig: true,
+        breite: 44,
+        nur: "allgemein"
     };
 }
 
@@ -58,6 +80,7 @@ export const FELDER: readonly Feld[] = [
     { schluessel: "einsatz", titel: "Für den Einsatz", beschreibung: "Bezeichnung des Einsatzes.", beispiel: "Hochwasser Hunte 2026", auch: ["Einsatz"], breite: 22 },
     { schluessel: "laufendeNummer", titel: "Lfd. Nr.", beschreibung: "Laufende Nummer des Auftrags.", beispiel: "12", auch: ["Laufende Nummer", "Nr", "Nummer"], breite: 9 },
     { schluessel: "empfaenger", titel: "Empfänger", beschreibung: "Wer den Auftrag erhält.", beispiel: "B-Gruppe 1. TZ", breite: 22 },
+    freitextFeld("lage", "Pegel Hunte 5,80 m, steigend. Deich bei Tungeln an zwei Stellen durchfeuchtet.\nEigene Kräfte im Abschnitt Süd.", "Gefahren- und Schadenlage, eigene Lage, Unterstellungen."),
     ...UNTERPUNKTE.filter(punkt => punkt.startsWith("1")).map(unterpunktFeld),
     {
         schluessel: "auftrag",
@@ -68,7 +91,10 @@ export const FELDER: readonly Feld[] = [
         mehrzeilig: true,
         breite: 44
     },
-    ...UNTERPUNKTE.filter(punkt => !punkt.startsWith("1")).map(unterpunktFeld),
+    freitextFeld("durchfuehrung", "Sandsackverbau an Sickerstellen, Ausleuchtung Deichkrone. Lagemeldung stündlich.", "Schwerpunkt, Einzelaufträge, Zusammenarbeit, Zeiten, Schutzmaßnahmen."),
+    ...UNTERPUNKTE.filter(punkt => punkt.startsWith("3")).map(unterpunktFeld),
+    freitextFeld("logistik", "Sandsäcke vom Bauhof, Verpflegung 18:00 Uhr am Gerätehaus.", "Verpflegung, Verbrauchsgüter, Betriebsstoff, Versorgung, Unterbringung."),
+    ...UNTERPUNKTE.filter(punkt => punkt.startsWith("4")).map(unterpunktFeld),
     {
         schluessel: "fuehrung",
         titel: "5 Führung und Verbindung",
@@ -81,10 +107,15 @@ export const FELDER: readonly Feld[] = [
     { schluessel: "ortDatum", titel: "Ort, Datum", beschreibung: "Ort und Datum der Unterschrift.", beispiel: "Oldenburg, 27.10.2026", auch: ["Ort Datum", "Ort"], breite: 20 },
     { schluessel: "unterschrift", titel: "Unterschrift", beschreibung: "Name in Druckschrift, falls gewünscht; unterschrieben wird von Hand.", beispiel: "Mustermann", breite: 16 },
     { schluessel: "dienststelle", titel: "Dienststelle", beschreibung: "Dienststelle oder Funktion der unterschreibenden Person.", beispiel: "ZTr TZ", breite: 16 },
-    { schluessel: "abgesandtAm", titel: "Abgesandt am", beschreibung: "Datum der Absendung.", beispiel: "27.10.", breite: 12 },
-    { schluessel: "abgesandtUm", titel: "Abgesandt um", beschreibung: "Uhrzeit der Absendung.", beispiel: "13:45", breite: 12 },
-    { schluessel: "abgesandtVon", titel: "Abgesandt von", beschreibung: "Wer den Auftrag abgesandt hat.", beispiel: "Fm Muster", breite: 16 }
+    { schluessel: "abgesandtAm", titel: "Abgesandt am", beschreibung: "Datum der Absendung.", beispiel: "27.10.", breite: 12, nur: "vordruck" },
+    { schluessel: "abgesandtUm", titel: "Abgesandt um", beschreibung: "Uhrzeit der Absendung.", beispiel: "13:45", breite: 12, nur: "vordruck" },
+    { schluessel: "abgesandtVon", titel: "Abgesandt von", beschreibung: "Wer den Auftrag abgesandt hat.", beispiel: "Fm Muster", breite: 16, nur: "vordruck" }
 ];
+
+/** Die Felder, die Maske und Vorlage in dieser Gestaltung zeigen. */
+export function felderFuer(gestaltung: Gestaltung): Feld[] {
+    return FELDER.filter(feld => !feld.nur || feld.nur === gestaltung);
+}
 
 export type Werte = Partial<Record<Feldschluessel, string>>;
 
@@ -96,8 +127,11 @@ export function zuDaten(werte: Werte): EinsatzauftragDaten {
         einsatz: wert("einsatz"),
         laufendeNummer: wert("laufendeNummer"),
         empfaenger: wert("empfaenger"),
+        lage: wert("lage"),
         unterpunkte: Object.fromEntries(UNTERPUNKTE.map(punkt => [punkt, wert(punkt)])),
         auftrag: wert("auftrag"),
+        durchfuehrung: wert("durchfuehrung"),
+        logistik: wert("logistik"),
         fuehrung: wert("fuehrung"),
         ortDatum: wert("ortDatum"),
         unterschrift: wert("unterschrift"),
@@ -211,7 +245,8 @@ export function leseTabelle(tabelle: readonly (readonly string[])[]): Tabelle {
     return { zeilen, spalten: zuordnung.filter((s): s is Feldschluessel => Boolean(s)), unbekannt };
 }
 
-/** Kopfzeile und eine Beispielzeile für die CSV-Vorlage. */
-export function vorlageTabelle(): string[][] {
-    return [FELDER.map(feld => feld.titel), FELDER.map(feld => feld.beispiel)];
+/** Kopfzeile und eine Beispielzeile für die CSV-Vorlage der Gestaltung. */
+export function vorlageTabelle(gestaltung: Gestaltung = "vordruck"): string[][] {
+    const felder = felderFuer(gestaltung);
+    return [felder.map(feld => feld.titel), felder.map(feld => feld.beispiel)];
 }

@@ -290,6 +290,9 @@ fieldset.wahl label.inline + label.inline { margin-top: var(--r-2); }
 fieldset.wahl.richtung { flex: 0 1 auto; }
 fieldset.wahl.richtung label.inline { display: inline-flex; margin-right: var(--r-4); }
 .einstellungen .zeile { align-items: flex-start; gap: var(--r-3) var(--r-5); }
+.einstellungen fieldset.wahl.gestaltung { margin-top: var(--r-2); }
+.einstellungen fieldset.wahl.gestaltung label.inline { align-items: flex-start; padding-top: 0.55rem; min-height: 0; }
+#nur-allgemein .zeile { margin-top: var(--r-3); }
 
 details.karte > summary, details.verlauf > summary {
   cursor: pointer; font-size: var(--t-l); font-weight: 700; list-style: none;

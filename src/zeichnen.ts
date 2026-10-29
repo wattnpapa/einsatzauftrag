@@ -4,7 +4,9 @@ import { setzeEinsatzauftrag, type EinsatzauftragOptionen, type Einsatzauftragsa
 
 /**
  * Zeichnet eine gesetzte Seite auf die aktuelle Seite der PDF. Danach sind
- * Schrift, Farben und Strichstärke auf die jsPDF-Vorgaben zurückgesetzt.
+ * Schrift, Farben und Strichstärke auf die jsPDF-Vorgaben zurückgesetzt. Eine
+ * eigene Schrift muss in dieser PDF eingebettet sein (`registriereSchrift`);
+ * `setzeEinsatzauftrag` erledigt das für die PDF, mit der gesetzt wurde.
  */
 export function zeichneSeite(pdf: jsPDF, seite: Seite): void {
     for (const element of seite.elemente) {
@@ -14,12 +16,12 @@ export function zeichneSeite(pdf: jsPDF, seite: Seite): void {
                 pdf.rect(element.x, element.y, element.b, element.h, "F");
                 break;
             case "linie":
-                pdf.setDrawColor(0, 0, 0);
+                pdf.setDrawColor(element.farbe);
                 pdf.setLineWidth(element.staerke);
                 pdf.line(element.x1, element.y1, element.x2, element.y2);
                 break;
             case "text":
-                pdf.setFont("helvetica", element.fett ? "bold" : "normal");
+                pdf.setFont(element.schrift, element.fett ? "bold" : "normal");
                 pdf.setFontSize(element.groesse);
                 pdf.setTextColor(element.farbe);
                 pdf.text(element.text, element.x, element.y, {

@@ -1,11 +1,12 @@
 /// <reference types="vite/client" />
 import { jsPDF } from "jspdf";
 import "./seite.js";
-import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
+import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen, type Gestaltung, type Schriftart } from "../../src/index.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
-import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { FELDER, felderFuer, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
+import { leseSchrift, meldeSchriftAn } from "./schriftdatei.js";
 import { zeigeSeiten } from "./vorschau.js";
 
 declare const __FASSUNG__: string;
@@ -121,18 +122,40 @@ el("kurzmeldung-schliessen").addEventListener("click", ereignis => {
 
 const EINSTELLUNGEN = "ea.einstellungen.v1";
 const LOGO = "ea.logo.v1";
+const SCHRIFTART = "ea.schriftart.v1";
 
 interface Einstellungen {
+    /** „vordruck“: Fb Fü 3 des THW; „allgemein“: schlicht, für Stellen außerhalb des THW. */
+    gestaltung: Gestaltung;
     kennung: string;
     organisation: string;
     schrift: "auto" | "10";
+    /** Leitfarbe der allgemeinen Gestaltung. */
+    farbe: "rot" | "schwarz";
 }
 
-const einstellungen: Einstellungen = { kennung: "", organisation: "", schrift: "auto", ...lies<Partial<Einstellungen>>(EINSTELLUNGEN) };
+const einstellungen: Einstellungen = { gestaltung: "vordruck", kennung: "", organisation: "", schrift: "auto", farbe: "rot", ...lies<Partial<Einstellungen>>(EINSTELLUNGEN) };
+if (einstellungen.gestaltung !== "allgemein") {
+    einstellungen.gestaltung = "vordruck";
+}
 let logo = lies<EinsatzauftragLogo>(LOGO);
+let schriftart = lies<Schriftart>(SCHRIFTART);
+if (schriftart && (typeof schriftart.name !== "string" || typeof schriftart.normal !== "string")) {
+    schriftart = undefined;
+}
+
+function allgemein(): boolean {
+    return einstellungen.gestaltung === "allgemein";
+}
 
 function optionen(): EinsatzauftragOptionen {
-    const ergebnis: EinsatzauftragOptionen = { logo, schriftgroesse: einstellungen.schrift === "10" ? 10 : undefined };
+    const ergebnis: EinsatzauftragOptionen = {
+        gestaltung: einstellungen.gestaltung,
+        logo,
+        schriftgroesse: einstellungen.schrift === "10" ? 10 : undefined,
+        schriftart: allgemein() ? schriftart : undefined,
+        leitfarbe: einstellungen.farbe === "schwarz" ? "#000000" : undefined
+    };
     if (einstellungen.kennung.trim()) {
         ergebnis.kennung = einstellungen.kennung.trim();
     }
@@ -143,21 +166,45 @@ function optionen(): EinsatzauftragOptionen {
 }
 
 function zeigeEinstellungen(): void {
+    for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="gestaltung"]')) {
+        knopf.checked = knopf.value === einstellungen.gestaltung;
+    }
     el<HTMLInputElement>("kennung").value = einstellungen.kennung;
+    el<HTMLInputElement>("kennung").placeholder = allgemein() ? "z. B. Formblatt 3" : "Fb Fü 3";
     el<HTMLTextAreaElement>("organisation").value = einstellungen.organisation;
+    el<HTMLTextAreaElement>("organisation").placeholder = allgemein() ? "z. B. Landkreis Musterland\nKatastrophenschutz" : "Technisches\nHilfswerk";
     for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="schrift"]')) {
         knopf.checked = knopf.value === einstellungen.schrift;
+    }
+    for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="farbe"]')) {
+        knopf.checked = knopf.value === einstellungen.farbe;
     }
     el("logo-stand").textContent = logo
         ? `Eigenes Logo, ${logo.breite} × ${logo.hoehe} Pixel. Es bleibt nur auf diesem Gerät.`
         : "Kein Logo. Ein eigenes Bild (PNG, JPEG, SVG) bleibt nur auf diesem Gerät.";
     el("logo-entfernen").hidden = !logo;
-    const teile = [
-        einstellungen.kennung.trim() || "Fb Fü 3",
-        einstellungen.organisation.trim().replace(/\s*\n\s*/g, " ") || "Technisches Hilfswerk",
-        logo ? "mit Logo" : "",
-        einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch"
-    ];
+    el("nur-allgemein").hidden = !allgemein();
+    el("nur-vordruck").hidden = allgemein();
+    el("schriftart-stand").textContent = schriftart
+        ? `${schriftart.name}${schriftart.fett ? ", normal und fett" : ", nur der normale Schnitt (Fettes wird normal gesetzt)"}. Die Dateien bleiben nur auf diesem Gerät.`
+        : "Helvetica, die Standardschrift der PDF. Für Aptos die Dateien Aptos.ttf und Aptos-Bold.ttf wählen; sie bleiben nur auf diesem Gerät.";
+    el("schriftart-entfernen").hidden = !schriftart;
+    const teile = allgemein()
+        ? [
+            "Allgemein",
+            einstellungen.farbe === "schwarz" ? "ohne Farbe" : "Rot",
+            schriftart ? schriftart.name : "Helvetica",
+            einstellungen.organisation.trim().replace(/\s*\n\s*/g, " "),
+            logo ? "mit Logo" : "",
+            einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch"
+        ]
+        : [
+            "THW-Vordruck",
+            einstellungen.kennung.trim() || "Fb Fü 3",
+            einstellungen.organisation.trim().replace(/\s*\n\s*/g, " ") || "Technisches Hilfswerk",
+            logo ? "mit Logo" : "",
+            einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch"
+        ];
     el("einstellungen-stand").textContent = teile.filter(Boolean).join(" · ");
 }
 
@@ -169,6 +216,63 @@ function einstellungenGeaendert(): void {
         zeigeTabelle();
     }
 }
+
+for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="gestaltung"]')) {
+    knopf.addEventListener("change", () => {
+        if (!knopf.checked) {
+            return;
+        }
+        const vorher = einstellungen.gestaltung;
+        einstellungen.gestaltung = knopf.value === "allgemein" ? "allgemein" : "vordruck";
+        if (einstellungen.gestaltung === vorher) {
+            return;
+        }
+        baueMaskeNeu();
+        einstellungenGeaendert();
+        kurzmeldung(allgemein()
+            ? "Allgemeine Gestaltung: fünf Abschnitte als Freitext, Rot als Leitfarbe."
+            : "Vordruck Fb Fü 3 des THW mit den Zeilen 1a bis 4g.");
+    });
+}
+for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="farbe"]')) {
+    knopf.addEventListener("change", () => {
+        einstellungen.farbe = knopf.value === "schwarz" ? "schwarz" : "rot";
+        einstellungenGeaendert();
+    });
+}
+el<HTMLInputElement>("schriftart-datei").addEventListener("change", async ereignis => {
+    const eingabe = ereignis.target as HTMLInputElement;
+    const dateien = [...(eingabe.files ?? [])];
+    eingabe.value = "";
+    if (dateien.length === 0) {
+        return;
+    }
+    try {
+        const vorher = schriftart;
+        schriftart = await leseSchrift(dateien, vorher);
+        merke(SCHRIFTART, schriftart);
+        await meldeSchriftAn(schriftart);
+        einstellungenGeaendert();
+        kurzmeldung(`Schrift ${schriftart.name} übernommen.`, () => {
+            schriftart = vorher;
+            merke(SCHRIFTART, schriftart);
+            einstellungenGeaendert();
+        });
+    } catch (fehler) {
+        kurzmeldung(fehler instanceof Error ? fehler.message : String(fehler));
+    }
+});
+el("schriftart-entfernen").addEventListener("click", () => {
+    const vorher = schriftart;
+    schriftart = undefined;
+    merke(SCHRIFTART, undefined);
+    einstellungenGeaendert();
+    kurzmeldung("Schrift entfernt, die PDF nimmt wieder Helvetica.", () => {
+        schriftart = vorher;
+        merke(SCHRIFTART, schriftart);
+        einstellungenGeaendert();
+    });
+});
 
 el<HTMLInputElement>("kennung").addEventListener("input", ereignis => {
     einstellungen.kennung = (ereignis.target as HTMLInputElement).value;
@@ -222,9 +326,15 @@ el("logo-entfernen").addEventListener("click", () => {
 const ENTWURF = "ea.entwurf.v1";
 const maske = el<HTMLFormElement>("maske");
 
-/** Karten der Maske in der Reihenfolge des Vordrucks. */
+/**
+ * Karten der Maske in der Reihenfolge des Vordrucks. Felder, die die gewählte
+ * Gestaltung nicht zeigt, bleiben als verborgene Eingaben erhalten: Ihr Text
+ * geht beim Wechsel nicht verloren und wird mitgedruckt.
+ */
 function baueMaske(): void {
     const ziel = el("maske-felder");
+    ziel.replaceChildren();
+    const sichtbar = new Set(felderFuer(einstellungen.gestaltung).map(feld => feld.schluessel));
     const karte = (titel: string, erlaeuterung?: string) => {
         const abschnitt = document.createElement("section");
         abschnitt.className = "karte";
@@ -258,6 +368,12 @@ function baueMaske(): void {
         behaelter.appendChild(label);
         return steuer;
     };
+    const verborgen = (schluessel: Feldschluessel) => {
+        const steuer = document.createElement("input");
+        steuer.type = "hidden";
+        steuer.name = schluessel;
+        ziel.appendChild(steuer);
+    };
     const zeile = (behaelter: HTMLElement) => {
         const div = document.createElement("div");
         div.className = "zeile";
@@ -267,26 +383,38 @@ function baueMaske(): void {
 
     const kopf = karte("Kopf");
     let reihe = zeile(kopf);
-    eingabe(reihe, "absender", "Absender", "input", "", "z. B. ZTr TZ OV Oldenburg");
+    eingabe(reihe, "absender", "Absender", "input", "", allgemein() ? "z. B. Kreisfeuerwehr, Einsatzleitung" : "z. B. ZTr TZ OV Oldenburg");
     eingabe(reihe, "laufendeNummer", "Lfd. Nr.", "input", "schmal").setAttribute("inputmode", "numeric");
     reihe = zeile(kopf);
     eingabe(reihe, "einsatz", "Für den Einsatz", "input", "", "z. B. Hochwasser Hunte 2026");
-    eingabe(reihe, "empfaenger", "Empfänger", "input", "", "z. B. B-Gruppe 1. TZ");
+    eingabe(reihe, "empfaenger", "Empfänger", "input", "", allgemein() ? "z. B. THW OV Oldenburg, 1. TZ" : "z. B. B-Gruppe 1. TZ");
 
     for (const abschnitt of ABSCHNITTE) {
-        const behaelter = karte(`${abschnitt.nummer}. ${abschnitt.titel}`, abschnitt.unterpunkte.length > 0 ? undefined : abschnitt.erlaeuterung);
+        // In der allgemeinen Gestaltung steht die Erläuterung ohne Kennungen als Beschriftung des Freitexts.
+        const erlaeuterung = abschnitt.unterpunkte.length > 0
+            ? abschnitt.unterpunkte.map(punkt => punkt.bedeutung).join(", ")
+            : abschnitt.erlaeuterung.replace(/^\(|\)$/g, "");
+        const behaelter = karte(`${abschnitt.nummer}. ${abschnitt.titel}`, abschnitt.unterpunkte.length > 0 || allgemein() ? undefined : abschnitt.erlaeuterung);
         if (abschnitt.unterpunkte.length > 0) {
+            if (sichtbar.has(abschnitt.freitext)) {
+                (eingabe(behaelter, abschnitt.freitext, erlaeuterung, "textarea") as HTMLTextAreaElement).rows = 3;
+            } else {
+                verborgen(abschnitt.freitext);
+            }
             for (const punkt of abschnitt.unterpunkte) {
-                eingabe(behaelter, punkt.kennung, `${punkt.kennung} · ${punkt.bedeutung}`, "textarea");
+                if (sichtbar.has(punkt.kennung)) {
+                    eingabe(behaelter, punkt.kennung, `${punkt.kennung} · ${punkt.bedeutung}`, "textarea");
+                } else {
+                    verborgen(punkt.kennung);
+                }
             }
         } else if (abschnitt.nummer === 2) {
             (eingabe(behaelter, "auftrag", "Erhaltener Auftrag", "textarea") as HTMLTextAreaElement).rows = 3;
+        } else if (allgemein()) {
+            (eingabe(behaelter, "fuehrung", erlaeuterung, "textarea") as HTMLTextAreaElement).rows = 3;
         } else {
             // Eine Eingabe je Formularzeile; der Text dazu steht verborgen in „fuehrung“.
-            const verborgen = document.createElement("input");
-            verborgen.type = "hidden";
-            verborgen.name = "fuehrung";
-            behaelter.appendChild(verborgen);
+            verborgen("fuehrung");
             const liste = document.createElement("div");
             liste.id = "fuehrung-zeilen";
             behaelter.appendChild(liste);
@@ -296,18 +424,52 @@ function baueMaske(): void {
         }
     }
 
-    const ende = karte("Unterschrift und Absendung");
+    const ende = karte(allgemein() ? "Unterschrift" : "Unterschrift und Absendung");
     reihe = zeile(ende);
     eingabe(reihe, "ortDatum", "Ort, Datum", "input", "", "z. B. Oldenburg, 27.10.2026");
     reihe.appendChild(knopf("Heute", "heute", "Datum von heute hinter den Ort setzen"));
     reihe = zeile(ende);
     eingabe(reihe, "unterschrift", "Unterschrift (Name, optional)", "input");
     eingabe(reihe, "dienststelle", "Dienststelle", "input");
-    reihe = zeile(ende);
-    eingabe(reihe, "abgesandtAm", "Abgesandt am", "input", "schmal");
-    eingabe(reihe, "abgesandtUm", "um", "input", "schmal");
-    eingabe(reihe, "abgesandtVon", "von", "input");
-    reihe.appendChild(knopf("Jetzt", "jetzt", "Datum und Uhrzeit der Absendung jetzt eintragen"));
+    if (allgemein()) {
+        for (const schluessel of ["abgesandtAm", "abgesandtUm", "abgesandtVon"] as const) {
+            verborgen(schluessel);
+        }
+    } else {
+        reihe = zeile(ende);
+        eingabe(reihe, "abgesandtAm", "Abgesandt am", "input", "schmal");
+        eingabe(reihe, "abgesandtUm", "um", "input", "schmal");
+        eingabe(reihe, "abgesandtVon", "von", "input");
+        reihe.appendChild(knopf("Jetzt", "jetzt", "Datum und Uhrzeit der Absendung jetzt eintragen"));
+    }
+    const verborgenHinweis = document.createElement("p");
+    verborgenHinweis.className = "hinweis";
+    verborgenHinweis.id = "verborgen-hinweis";
+    verborgenHinweis.hidden = true;
+    ende.appendChild(verborgenHinweis);
+}
+
+/** Baut die Maske für die gewählte Gestaltung neu auf und behält alle Werte. */
+function baueMaskeNeu(): void {
+    const werte = werteDerMaske();
+    baueMaske();
+    setzeWerte(werte);
+}
+
+/** Nennt Eintragungen, die die Gestaltung nicht zeigt, aber mitdruckt. */
+function zeigeVerborgene(werte: Werte): void {
+    const hinweis = document.getElementById("verborgen-hinweis");
+    if (!hinweis) {
+        return;
+    }
+    const sichtbar = new Set(felderFuer(einstellungen.gestaltung).map(feld => feld.schluessel));
+    const verborgene = FELDER.filter(feld => !sichtbar.has(feld.schluessel) && (werte[feld.schluessel] ?? "").trim() !== "");
+    if (verborgene.length === 0) {
+        hinweis.hidden = true;
+        return;
+    }
+    hinweis.textContent = `Mitgedruckt, aber hier nicht zu bearbeiten, weil die ${allgemein() ? "allgemeine Gestaltung" : "THW-Vorlage"} das Feld nicht hat: ${verborgene.map(feld => `„${feld.titel}“`).join(", ")}. Zum Ändern unter „Gestaltung und Kopf“ die andere Gestaltung wählen oder „Felder leeren“.`;
+    hinweis.hidden = false;
 }
 
 function knopf(text: string, id: string, beschreibung: string): HTMLButtonElement {
@@ -319,9 +481,12 @@ function knopf(text: string, id: string, beschreibung: string): HTMLButtonElemen
     return neu;
 }
 
-/** Die Eingaben von Abschnitt 5, mindestens zwei wie im Vordruck, oder `anzahl`. */
+/** Die Eingaben von Abschnitt 5 im Vordruck, mindestens zwei wie dort, oder `anzahl`. */
 function fuehrungFelder(zeilen: readonly string[], anzahl = Math.max(2, zeilen.length)): void {
-    const liste = el("fuehrung-zeilen");
+    const liste = document.getElementById("fuehrung-zeilen");
+    if (!liste) {
+        return;
+    }
     liste.replaceChildren(...Array.from({ length: anzahl }, (_, index) => {
         const label = document.createElement("label");
         label.className = "feld";
@@ -339,7 +504,7 @@ function fuehrungFelder(zeilen: readonly string[], anzahl = Math.max(2, zeilen.l
 }
 
 function fuehrungAusFeldern(): void {
-    const felder = [...el("fuehrung-zeilen").querySelectorAll<HTMLTextAreaElement>("textarea")];
+    const felder = [...(document.getElementById("fuehrung-zeilen")?.querySelectorAll<HTMLTextAreaElement>("textarea") ?? [])];
     (maske.elements.namedItem("fuehrung") as HTMLInputElement).value = fuehrungText(felder.map(feldElement => feldElement.value));
 }
 
@@ -368,6 +533,15 @@ function setzeWerte(werte: Werte): void {
     geaendert();
 }
 
+/** Alle Textfelder an ihren Inhalt anpassen, etwa nach dem Aufbau der Maske. */
+function alleAnpassen(): void {
+    for (const steuer of steuerelemente()) {
+        if (steuer instanceof HTMLTextAreaElement) {
+            anpassen(steuer);
+        }
+    }
+}
+
 /** Textfelder wachsen mit dem Text, damit nichts versteckt bleibt. */
 function anpassen(feldElement: HTMLTextAreaElement): void {
     feldElement.style.height = "auto";
@@ -384,6 +558,7 @@ function geaendert(): void {
         el("entwurf-stand").textContent = hatInhalt(werte)
             ? `Entwurf auf diesem Gerät gespeichert, ${uhrzeit()} Uhr.`
             : "";
+        zeigeVerborgene(werte);
     }, 400);
     vorschauBald();
 }
@@ -418,7 +593,7 @@ function vorschauJetzt(): void {
     const hinweis = el("seiten-hinweis");
     if (seiten > 1) {
         hinweis.textContent = einstellungen.schrift === "10"
-            ? `Der Auftrag braucht ${seiten} Seiten. Mit „Schrift automatisch“ (unter „Kopf und Schrift“) wird bis 8 pt verkleinert, wenn er dann auf weniger Seiten passt; sonst Text kürzen.`
+            ? `Der Auftrag braucht ${seiten} Seiten. Mit „Schrift automatisch“ (unter „Gestaltung und Kopf“) wird bis 8 pt verkleinert, wenn er dann auf weniger Seiten passt; sonst Text kürzen.`
             : `Der Auftrag passt auch mit 8 pt nicht auf eine Seite und wird auf ${seiten} Seiten gesetzt. Jede Seite trägt Kopf, lfd. Nr. und Seitenzahl.`;
         hinweis.hidden = false;
     } else {
@@ -453,7 +628,7 @@ el("einzeln-drucken").addEventListener("click", () => {
 });
 
 /** Was „Nächster Auftrag“ leert. */
-const NAECHSTER_LEERT: readonly Feldschluessel[] = ["empfaenger", "auftrag", "3a", "3b", "3c", "abgesandtAm", "abgesandtUm"];
+const NAECHSTER_LEERT: readonly Feldschluessel[] = ["empfaenger", "auftrag", "durchfuehrung", "3a", "3b", "3c", "abgesandtAm", "abgesandtUm"];
 
 function hochzaehlen(nummer: string): string {
     const treffer = /^(.*?)(\d+)(\D*)$/.exec(nummer.trim());
@@ -498,9 +673,9 @@ maske.addEventListener("click", ereignis => {
         steuer.value = ort ? `${ort}, ${heute()}` : heute();
         geaendert();
     } else if (ziel.id === "fuehrung-weitere") {
-        const felder = [...el("fuehrung-zeilen").querySelectorAll<HTMLTextAreaElement>("textarea")];
+        const felder = [...(document.getElementById("fuehrung-zeilen")?.querySelectorAll<HTMLTextAreaElement>("textarea") ?? [])];
         fuehrungFelder(felder.map(feldElement => feldElement.value), felder.length + 1);
-        el("fuehrung-zeilen").querySelector<HTMLTextAreaElement>("label:last-child textarea")?.focus();
+        document.getElementById("fuehrung-zeilen")?.querySelector<HTMLTextAreaElement>("label:last-child textarea")?.focus();
     } else if (ziel.id === "jetzt") {
         (maske.elements.namedItem("abgesandtAm") as HTMLInputElement).value = heute();
         (maske.elements.namedItem("abgesandtUm") as HTMLInputElement).value = uhrzeit();
@@ -548,14 +723,14 @@ let tabelle: { name: string; zeilen: Tabellenzeile[]; hinweise: string[] } | und
 el("vorlage-xlsx").addEventListener("click", async () => {
     try {
         const { erzeugeVorlage } = await import("./excel.js");
-        herunterladen(await erzeugeVorlage(), "einsatzauftraege_vorlage.xlsx");
+        herunterladen(await erzeugeVorlage(einstellungen.gestaltung), "einsatzauftraege_vorlage.xlsx");
     } catch (fehler) {
         kurzmeldung(`Die Excel-Vorlage ließ sich nicht erzeugen: ${fehler instanceof Error ? fehler.message : String(fehler)}. Ohne Netz geht die CSV-Vorlage.`);
     }
 });
 
 el("vorlage-csv").addEventListener("click", () => {
-    herunterladen(new Blob([schreibeCsv(vorlageTabelle())], { type: "text/csv;charset=utf-8" }), "einsatzauftraege_vorlage.csv");
+    herunterladen(new Blob([schreibeCsv(vorlageTabelle(einstellungen.gestaltung))], { type: "text/csv;charset=utf-8" }), "einsatzauftraege_vorlage.csv");
 });
 
 async function leseDatei(datei: File): Promise<void> {
@@ -687,13 +862,12 @@ if (entwurf?.werte && hatInhalt(entwurf.werte)) {
     setzeWerte(entwurf.werte);
     const zeit = new Date(entwurf.zeit);
     el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt.`;
+    zeigeVerborgene(entwurf.werte);
 }
 vorschauJetzt();
-for (const steuer of steuerelemente()) {
-    if (steuer instanceof HTMLTextAreaElement) {
-        anpassen(steuer);
-    }
-}
+alleAnpassen();
+// Die eigene Schrift steht der Vorschau erst nach dem Anmelden zur Verfügung; die PDF hat sie ohnehin.
+void meldeSchriftAn(schriftart).then(() => vorschauBald());
 el("fassung").textContent = `Fassung ${__FASSUNG__}.`;
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {

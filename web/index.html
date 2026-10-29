@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Einsatzauftrag als PDF ausfüllen – Fb Fü 3</title>
-  <meta name="description" content="Einsatzauftrag (Fb Fü 3) am Bildschirm ausfüllen oder viele aus einer Excel- bzw. CSV-Tabelle erzeugen und als PDF herunterladen. Läuft komplett im Browser." />
+  <title>Einsatzauftrag als PDF ausfüllen – Fb Fü 3 oder schlicht</title>
+  <meta name="description" content="Einsatzauftrag am Bildschirm ausfüllen oder viele aus einer Excel- bzw. CSV-Tabelle erzeugen und als PDF herunterladen: als Vordruck Fb Fü 3 des THW oder in schlichter Gestaltung für andere Stellen. Läuft komplett im Browser." />
   <meta name="theme-color" content="#12275e" />
   <meta name="color-scheme" content="light dark" />
   <style>
@@ -67,17 +67,22 @@
     </header>
 
     <main id="inhalt" tabindex="-1">
-      <p class="einleitung">Einsatzauftrag nach dem Vordruck Fb Fü 3 als PDF: einen am Bildschirm ausfüllen oder viele auf einmal aus einer Tabelle erzeugen. Er wird möglichst auf eine A4-Seite gesetzt.</p>
+      <p class="einleitung">Einsatzauftrag als PDF: einen am Bildschirm ausfüllen oder viele auf einmal aus einer Tabelle erzeugen, als Vordruck Fb Fü 3 des THW oder schlicht gegliedert in Lage, Auftrag, Durchführung, Logistik, Führung und Verbindung. Er wird möglichst auf eine A4-Seite gesetzt.</p>
       <p class="offline-badge">✓ Läuft komplett im Browser. Texte und Tabellen verlassen dieses Gerät nicht.<span id="offline-stand" hidden> Startet nach dem ersten Aufruf auch ohne Netz.</span></p>
       <p class="warnung" id="speicher-warnung" role="alert" hidden></p>
 
       <details class="karte einstellungen" id="einstellungen">
-        <summary><span>Kopf und Schrift</span> <span class="stand" id="einstellungen-stand"></span></summary>
+        <summary><span>Gestaltung und Kopf</span> <span class="stand" id="einstellungen-stand"></span></summary>
+        <fieldset class="wahl gestaltung">
+          <legend>Gestaltung</legend>
+          <label class="inline"><input type="radio" name="gestaltung" value="vordruck" checked /> THW: Vordruck Fb Fü 3 mit blauem Balken, gelben Kopfzeilen und den Zeilen 1a bis 4g</label>
+          <label class="inline"><input type="radio" name="gestaltung" value="allgemein" /> Allgemein: für Stellen außerhalb des THW, ohne Vordruck, die fünf Abschnitte als Freitext, Rot als Leitfarbe</label>
+        </fieldset>
         <div class="zeile">
-          <label class="feld schmal">Kennung (links)
+          <label class="feld schmal">Kennung
             <input name="kennung" id="kennung" placeholder="Fb Fü 3" />
           </label>
-          <label class="feld">Organisation (rechts, eine oder zwei Zeilen)
+          <label class="feld">Organisation (rechts im Kopf, eine oder zwei Zeilen)
             <textarea name="organisation" id="organisation" rows="2" placeholder="Technisches&#10;Hilfswerk"></textarea>
           </label>
         </div>
@@ -96,7 +101,25 @@
             <label class="inline"><input type="radio" name="schrift" value="10" /> Immer 10 pt</label>
           </fieldset>
         </div>
-        <p class="hinweis">Gilt für Einzelaufträge und Tabellen. Die Kennung „Fb Fü 3“ und „Technisches Hilfswerk“ stehen, wenn die Felder leer bleiben.</p>
+        <div id="nur-allgemein" hidden>
+          <div class="zeile">
+            <fieldset class="wahl">
+              <legend>Leitfarbe</legend>
+              <label class="inline"><input type="radio" name="farbe" value="rot" checked /> Rot: Titel, Linien und Abschnittsnummern</label>
+              <label class="inline"><input type="radio" name="farbe" value="schwarz" /> Schwarz: ganz ohne Farbe</label>
+            </fieldset>
+            <div class="feld logo-feld">
+              <span class="beschriftung">Schriftart, z. B. Aptos</span>
+              <p class="hinweis" id="schriftart-stand">Helvetica, die Standardschrift der PDF.</p>
+              <div class="aktionen">
+                <label class="datei-knopf knopf-label">TTF-Dateien wählen…<input type="file" id="schriftart-datei" class="nur-sr" accept=".ttf,font/ttf" multiple /></label>
+                <button type="button" id="schriftart-entfernen" hidden>Schrift entfernen</button>
+              </div>
+            </div>
+          </div>
+          <p class="hinweis">Aptos gehört zu Microsoft 365 und darf hier nicht mitgeliefert werden. Die Dateien Aptos.ttf und Aptos-Bold.ttf stammen aus der eigenen Office-Installation (Windows: in den Schrifteinstellungen nach „Aptos“ suchen, Mac: Schriftsammlung); eine Datei mit „Bold“ im Namen gilt als fetter Schnitt. Auch jede andere TrueType-Schrift geht. Die Schrift wird in die PDF eingebettet, die Dateien bleiben auf diesem Gerät.</p>
+        </div>
+        <p class="hinweis" id="nur-vordruck">Gilt für Einzelaufträge und Tabellen. Die Kennung „Fb Fü 3“ und „Technisches Hilfswerk“ stehen, wenn die Felder leer bleiben.</p>
       </details>
 
       <!-- ============================ Einzeln ============================ -->
@@ -126,7 +149,7 @@
               <button type="button" id="einzeln-naechster">Nächster Auftrag</button>
               <button type="button" class="abgesetzt" id="einzeln-leeren">Felder leeren</button>
             </div>
-            <p class="hinweis">„Nächster Auftrag“ behält Absender, Einsatz, Lage, Logistik, Führung und Verbindung sowie die Unterschriftszeile, leert Empfänger, Auftrag, Durchführung und „Abgesandt“ und zählt die lfd. Nr. hoch.</p>
+            <p class="hinweis">„Nächster Auftrag“ behält Absender, Einsatz, Lage, Logistik, Führung und Verbindung sowie die Unterschriftszeile, leert Empfänger, Auftrag, Durchführung und „Abgesandt“ und zählt die lfd. Nr. hoch. Die Gestaltung (THW-Vordruck oder allgemein) steht oben unter „Gestaltung und Kopf“.</p>
             <p class="nebentext" id="entwurf-stand"></p>
           </div>
         </div>
@@ -137,7 +160,7 @@
         <div class="karten-paar">
           <section class="karte">
             <h3>1. Vorlage holen</h3>
-            <p class="nebentext">Eine Zeile je Einsatzauftrag, eine Spalte je Feld des Vordrucks. Die Excel-Vorlage hat ein Blatt „Beispiel“ und eine Anleitung mit allen Spalten. Zeilenumbrüche in einer Zelle (Alt+Eingabe) bleiben im Vordruck erhalten.</p>
+            <p class="nebentext">Eine Zeile je Einsatzauftrag, eine Spalte je Feld der gewählten Gestaltung. Die Excel-Vorlage hat ein Blatt „Beispiel“ und eine Anleitung mit allen Spalten. Zeilenumbrüche in einer Zelle (Alt+Eingabe) bleiben im Vordruck erhalten.</p>
             <div class="aktionen">
               <button type="button" id="vorlage-xlsx">Excel-Vorlage (.xlsx)</button>
               <button type="button" id="vorlage-csv">CSV-Vorlage</button>

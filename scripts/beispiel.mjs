@@ -1,5 +1,6 @@
 // Schreibt Beispiel-PDFs nach ausgabe/: einen leeren Vordruck, einen
-// typischen Auftrag (eine Seite) und einen langen (mehrere Seiten).
+// typischen Auftrag (eine Seite) und einen langen (mehrere Seiten), dazu
+// dieselben in der Gestaltung „allgemein“ (allgemein-*.pdf).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { jsPDF } from "jspdf";
 import { zeichneEinsatzauftrag } from "../dist/index.js";
@@ -35,10 +36,33 @@ const lang = {
     unterpunkte: Object.fromEntries(Object.entries(typisch.unterpunkte).map(([k, v]) => [k, `${v}\n${v} ${v}`]))
 };
 
+const allgemein = {
+    absender: "Kreisfeuerwehr Oldenburg, Einsatzleitung",
+    einsatz: "Hochwasser Hunte 2026",
+    laufendeNummer: "12",
+    empfaenger: "THW OV Oldenburg, 1. Technischer Zug",
+    lage: "Pegel Hunte bei 5,80 m, steigend. Deich bei Tungeln an zwei Stellen durchfeuchtet.\nFF Kreyenbrück und FF Bümmerstede im Abschnitt Süd.",
+    auftrag: typisch.auftrag,
+    durchfuehrung: "Sandsackverbau an den Sickerstellen, Ausleuchtung der Deichkrone ab Einbruch der Dunkelheit. Lagemeldung stündlich an die Einsatzleitung.",
+    logistik: "Sandsäcke über den Bauhof Oldenburg, Verpflegung 18:00 Uhr am Gerätehaus Kreyenbrück.",
+    fuehrung: "Einsatzleitung: Gerätehaus Kreyenbrück\nFunk: TMO 304_OL_FW, Rufname Florian Oldenburg 10",
+    ortDatum: "Oldenburg, 27.10.2026",
+    unterschrift: "Mustermann",
+    dienststelle: "Kreisbrandmeister"
+};
+
 mkdirSync("ausgabe", { recursive: true });
-for (const [name, daten] of [["leer", {}], ["typisch", typisch], ["lang", lang]]) {
+const fusszeile = "Erstellt mit Einsatzauftrag (EUPL-1.2)";
+for (const [name, daten, optionen] of [
+    ["leer", {}, {}],
+    ["typisch", typisch, {}],
+    ["lang", lang, {}],
+    ["allgemein-leer", {}, { gestaltung: "allgemein" }],
+    ["allgemein-typisch", allgemein, { gestaltung: "allgemein", organisation: "Landkreis Oldenburg\nKatastrophenschutz" }],
+    ["allgemein-lang", { ...allgemein, auftrag: lang.auftrag }, { gestaltung: "allgemein", leitfarbe: "#000000" }]
+]) {
     const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
-    const satz = zeichneEinsatzauftrag(pdf, daten, { fusszeile: "Erstellt mit Einsatzauftrag (EUPL-1.2)" });
+    const satz = zeichneEinsatzauftrag(pdf, daten, { fusszeile, ...optionen });
     writeFileSync(`ausgabe/${name}.pdf`, Buffer.from(pdf.output("arraybuffer")));
     console.log(`${name}: ${satz.seiten.length} Seite(n), ${satz.schriftgroesse} pt`);
 }

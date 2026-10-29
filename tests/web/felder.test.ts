@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UNTERPUNKTE } from "../../src/index.js";
-import { FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
+import { FELDER, felderFuer, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
 
 describe("FELDER", () => {
     it("hat jedes Feld genau einmal, alle Unterpunkte eingeschlossen", () => {
@@ -16,6 +16,16 @@ describe("FELDER", () => {
             expect(feldZuKopf(feld.titel)).toBe(feld.schluessel);
         }
     });
+
+    it("zeigt je Gestaltung ihre Felder: Unterzeilen und Abgesandt im Vordruck, Freitexte allgemein", () => {
+        const vordruck = felderFuer("vordruck").map(feld => feld.schluessel);
+        const allgemein = felderFuer("allgemein").map(feld => feld.schluessel);
+        expect(vordruck).toEqual(expect.arrayContaining([...UNTERPUNKTE, "abgesandtAm", "auftrag", "fuehrung"]));
+        expect(vordruck).not.toContain("lage");
+        expect(allgemein).toEqual(["absender", "einsatz", "laufendeNummer", "empfaenger", "lage", "auftrag", "durchfuehrung", "logistik", "fuehrung", "ortDatum", "unterschrift", "dienststelle"]);
+        expect(vorlageTabelle("allgemein")[0]).toEqual(["Absender", "Für den Einsatz", "Lfd. Nr.", "Empfänger", "1 Lage", "2 Auftrag", "3 Durchführung", "4 Logistik", "5 Führung und Verbindung", "Ort, Datum", "Unterschrift", "Dienststelle"]);
+        expect(vorlageTabelle()[0]).toContain("1a Gefahren- / Schadenlage");
+    });
 });
 
 describe("feldZuKopf", () => {
@@ -27,6 +37,9 @@ describe("feldZuKopf", () => {
         expect(feldZuKopf("1a")).toBe("1a");
         expect(feldZuKopf("4c Kraftstoff")).toBe("4c");
         expect(feldZuKopf("Führung und Verbindung")).toBe("fuehrung");
+        expect(feldZuKopf("Lage")).toBe("lage");
+        expect(feldZuKopf("3 Durchführung")).toBe("durchfuehrung");
+        expect(feldZuKopf("Logistik")).toBe("logistik");
         expect(feldZuKopf("Bemerkung")).toBeUndefined();
         expect(feldZuKopf("4h")).toBeUndefined();
     });
@@ -57,21 +70,28 @@ describe("leseTabelle", () => {
         expect(() => leseTabelle([["a", "b"], ["1", "2"]])).toThrow(/Keine bekannte Spalte/);
     });
 
-    it("liest die eigene CSV-Vorlage mit ihrer Beispielzeile", () => {
+    it("liest die eigene CSV-Vorlage mit ihrer Beispielzeile, in beiden Gestaltungen", () => {
         const tabelle = leseTabelle(vorlageTabelle());
         expect(tabelle.unbekannt).toEqual([]);
         expect(tabelle.zeilen).toHaveLength(1);
         expect(tabelle.zeilen[0]?.werte.empfaenger).toBe("B-Gruppe 1. TZ");
+        const allgemein = leseTabelle(vorlageTabelle("allgemein"));
+        expect(allgemein.unbekannt).toEqual([]);
+        expect(allgemein.zeilen[0]?.werte.lage).toContain("Pegel");
+        expect(allgemein.zeilen[0]?.werte["1a"]).toBeUndefined();
     });
 });
 
 describe("zuDaten", () => {
     it("übersetzt die Werte in die Daten der Bibliothek", () => {
-        const daten = zuDaten({ empfaenger: "A", "3b": "Sandsäcke", fuehrung: "Funk" });
+        const daten = zuDaten({ empfaenger: "A", "3b": "Sandsäcke", fuehrung: "Funk", lage: "Pegel", logistik: "Sand" });
         expect(daten.empfaenger).toBe("A");
         expect(daten.unterpunkte?.["3b"]).toBe("Sandsäcke");
         expect(daten.unterpunkte?.["1a"]).toBe("");
         expect(daten.fuehrung).toBe("Funk");
+        expect(daten.lage).toBe("Pegel");
+        expect(daten.durchfuehrung).toBe("");
+        expect(daten.logistik).toBe("Sand");
     });
 
     it("erkennt leere Werte", () => {

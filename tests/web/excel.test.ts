@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
 import { BLATT, erzeugeVorlage, leseExcel, zellText } from "../../web/src/excel.js";
-import { FELDER, leseTabelle } from "../../web/src/felder.js";
+import { felderFuer, leseTabelle } from "../../web/src/felder.js";
 
 async function puffer(mappe: ExcelJS.Workbook): Promise<ArrayBuffer> {
     const daten = await mappe.xlsx.writeBuffer();
@@ -23,10 +23,22 @@ describe("Excel", () => {
         const mappe = new ExcelJS.Workbook();
         await mappe.xlsx.load(await (await erzeugeVorlage()).arrayBuffer());
         const blatt = mappe.getWorksheet(BLATT);
-        blatt?.addRow(FELDER.map(feld => feld.schluessel === "empfaenger" ? "Gruppe X" : ""));
-        blatt?.addRow(FELDER.map(feld => feld.schluessel === "empfaenger" ? "Gruppe Y" : ""));
+        blatt?.addRow(felderFuer("vordruck").map(feld => feld.schluessel === "empfaenger" ? "Gruppe X" : ""));
+        blatt?.addRow(felderFuer("vordruck").map(feld => feld.schluessel === "empfaenger" ? "Gruppe Y" : ""));
         const tabelle = leseTabelle(await leseExcel(await puffer(mappe)));
         expect(tabelle.zeilen.map(zeile => zeile.werte.empfaenger)).toEqual(["Gruppe X", "Gruppe Y"]);
+    });
+
+    it("hat in der allgemeinen Vorlage die Freitextspalten statt der Unterzeilen", async () => {
+        const mappe = new ExcelJS.Workbook();
+        await mappe.xlsx.load(await (await erzeugeVorlage("allgemein")).arrayBuffer());
+        const koepfe = (mappe.getWorksheet(BLATT)?.getRow(1).values as string[]).filter(Boolean);
+        expect(koepfe).toContain("1 Lage");
+        expect(koepfe).toContain("4 Logistik");
+        expect(koepfe).not.toContain("1a Gefahren- / Schadenlage");
+        expect(koepfe).not.toContain("Abgesandt am");
+        const tabelle = leseTabelle(await leseExcel(await puffer(mappe)));
+        expect(tabelle.zeilen[0]?.werte.durchfuehrung).toContain("Sandsackverbau");
     });
 
     it("meldet kaputte Dateien und Mappen ohne bekannte Spalten verständlich", async () => {

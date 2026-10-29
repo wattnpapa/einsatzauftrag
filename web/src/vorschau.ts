@@ -3,6 +3,8 @@ import { BLATT_BREITE, BLATT_HOEHE, type Seite } from "../../src/index.js";
 // Vorschau als SVG aus denselben Zeichenelementen, die in die PDF gehen.
 // Umbruch und Schriftgröße stimmen damit genau; die Schrift des Browsers
 // weicht von Helvetica leicht ab und wird auf die gemessene Breite gestaucht.
+// Eine eigene Schrift (schriftdatei.ts) ist im Browser unter demselben Namen
+// wie in der PDF angemeldet.
 
 const SVG = "http://www.w3.org/2000/svg";
 const PT = 25.4 / 72;
@@ -37,7 +39,7 @@ export function seiteAlsSvg(seite: Seite, beschriftung: string): SVGSVGElement {
                 break;
             case "linie":
                 svg.appendChild(element("line", {
-                    x1: teil.x1, y1: teil.y1, x2: teil.x2, y2: teil.y2, stroke: "#000000", "stroke-width": teil.staerke
+                    x1: teil.x1, y1: teil.y1, x2: teil.x2, y2: teil.y2, stroke: teil.farbe, "stroke-width": teil.staerke
                 }));
                 break;
             case "text": {
@@ -45,7 +47,9 @@ export function seiteAlsSvg(seite: Seite, beschriftung: string): SVGSVGElement {
                     x: teil.x,
                     y: teil.y,
                     "font-size": teil.groesse * PT,
-                    "font-family": "Helvetica, Arial, 'Liberation Sans', sans-serif",
+                    "font-family": teil.schrift === "helvetica"
+                        ? "Helvetica, Arial, 'Liberation Sans', sans-serif"
+                        : `'${teil.schrift.replace(/'/g, "")}', Helvetica, Arial, sans-serif`,
                     "font-weight": teil.fett ? 700 : 400,
                     fill: teil.farbe,
                     "text-anchor": teil.ausrichtung === "links" ? "start" : teil.ausrichtung === "mitte" ? "middle" : "end"

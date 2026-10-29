@@ -1,5 +1,6 @@
 import type { CellValue, Workbook, Worksheet } from "exceljs";
-import { FELDER, feldZuKopf } from "./felder.js";
+import type { Gestaltung } from "../../src/index.js";
+import { felderFuer, feldZuKopf, type Feld } from "./felder.js";
 
 // ExcelJS ist groß (rund 1 MB). Es wird erst geladen, wenn jemand die Vorlage
 // holt oder eine Excel-Datei einliest; die Eingabemaske braucht es nie.
@@ -11,9 +12,9 @@ async function excel(): Promise<typeof import("exceljs")> {
 export const BLATT = "Einsatzaufträge";
 const KOPF_FARBE = "FF12275E";
 
-function blattMitKopf(mappe: Workbook, name: string): Worksheet {
+function blattMitKopf(mappe: Workbook, name: string, felder: readonly Feld[]): Worksheet {
     const blatt = mappe.addWorksheet(name, { views: [{ state: "frozen", ySplit: 1 }] });
-    blatt.columns = FELDER.map(feld => ({
+    blatt.columns = felder.map(feld => ({
         header: feld.titel,
         key: feld.schluessel,
         width: feld.breite,
@@ -25,7 +26,7 @@ function blattMitKopf(mappe: Workbook, name: string): Worksheet {
     kopf.fill = { type: "pattern", pattern: "solid", fgColor: { argb: KOPF_FARBE } };
     kopf.alignment = { vertical: "middle", wrapText: true };
     kopf.height = 32;
-    FELDER.forEach((feld, index) => {
+    felder.forEach((feld, index) => {
         kopf.getCell(index + 1).note = feld.beschreibung;
     });
     return blatt;
@@ -33,16 +34,18 @@ function blattMitKopf(mappe: Workbook, name: string): Worksheet {
 
 /**
  * Die Vorlage: ein leeres Blatt „Einsatzaufträge“ (eine Zeile je Auftrag),
- * ein Blatt „Beispiel“ mit einem ausgefüllten Auftrag und eine Anleitung.
+ * ein Blatt „Beispiel“ mit einem ausgefüllten Auftrag und eine Anleitung. Die
+ * Spalten sind die Felder der Gestaltung; gelesen werden immer alle.
  */
-export async function erzeugeVorlage(): Promise<Blob> {
+export async function erzeugeVorlage(gestaltung: Gestaltung = "vordruck"): Promise<Blob> {
     const ExcelJS = await excel();
     const mappe: Workbook = new ExcelJS.Workbook();
     mappe.creator = "einsatzauftrag";
+    const felder = felderFuer(gestaltung);
 
-    blattMitKopf(mappe, BLATT);
-    const beispiel = blattMitKopf(mappe, "Beispiel");
-    beispiel.addRow(Object.fromEntries(FELDER.map(feld => [feld.schluessel, feld.beispiel])));
+    blattMitKopf(mappe, BLATT, felder);
+    const beispiel = blattMitKopf(mappe, "Beispiel", felder);
+    beispiel.addRow(Object.fromEntries(felder.map(feld => [feld.schluessel, feld.beispiel])));
 
     const anleitung = mappe.addWorksheet("Anleitung");
     anleitung.columns = [
@@ -53,7 +56,7 @@ export async function erzeugeVorlage(): Promise<Blob> {
     anleitung.getRow(1).font = { bold: true };
     anleitung.addRow({ titel: `Jede Zeile im Blatt „${BLATT}“ ergibt einen Einsatzauftrag. Leere Zeilen werden übersprungen, leere Zellen bleiben im Vordruck leer. Zeilenumbrüche in einer Zelle (Alt+Eingabe) bleiben erhalten. Das Blatt „Beispiel“ wird nur gelesen, wenn es das einzige ausgefüllte ist.` });
     anleitung.addRow({});
-    for (const feld of FELDER) {
+    for (const feld of felder) {
         anleitung.addRow({ titel: feld.titel, beschreibung: feld.beschreibung, beispiel: feld.beispiel });
     }
 
