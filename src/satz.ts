@@ -145,8 +145,8 @@ const GELB = "#ffffa6";
 const BLAU = "#0000f5";
 const SCHWARZ = "#000000";
 const GRAU = "#555555";
-/** Wasserzeichen einer Übung: blass genug, dass der Text darüber lesbar bleibt, kräftig genug für den Drucker. */
-const WASSERZEICHEN = { text: "ÜBUNG", groesse: 120, winkel: 45, farbe: "#d4d4d4" } as const;
+/** Wasserzeichen einer Übung: helles Rot, blass genug, dass der Text darüber lesbar bleibt, kräftig genug für den Drucker. */
+const WASSERZEICHEN = { text: "ÜBUNG", groesse: 120, winkel: 45, farbe: "#f4b8b8" } as const;
 
 const PT = 25.4 / 72;
 const SCHRIFT_BESCHRIFTUNG = 10;
