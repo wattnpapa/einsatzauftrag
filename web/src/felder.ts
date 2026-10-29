@@ -98,7 +98,7 @@ export function zuDaten(werte: Werte): EinsatzauftragDaten {
         empfaenger: wert("empfaenger"),
         unterpunkte: Object.fromEntries(UNTERPUNKTE.map(punkt => [punkt, wert(punkt)])),
         auftrag: wert("auftrag"),
-        fuehrung: wert("fuehrung"),
+        fuehrung: fuehrungZeilen(wert("fuehrung")),
         ortDatum: wert("ortDatum"),
         unterschrift: wert("unterschrift"),
         dienststelle: wert("dienststelle"),
@@ -109,17 +109,27 @@ export function zuDaten(werte: Werte): EinsatzauftragDaten {
 }
 
 /**
- * Abschnitt 5 als einzelne Formularzeilen: Im gespeicherten Text trennt eine
- * Leerzeile die Zeilen, so wie die Bibliothek ihn setzt.
+ * Ende einer Zeile von Abschnitt 5 im Text der Maske (ASCII „Record
+ * Separator“). In ein Textfeld tippt ihn niemand, so bleiben Leerzeilen
+ * innerhalb einer Zeile stehen.
+ */
+const ZEILENENDE = "\u001E";
+
+/**
+ * Abschnitt 5 als einzelne Formularzeilen. Text aus der Maske trägt nach jeder
+ * Zeile ein `ZEILENENDE`; Text aus einer Tabelle (oder ein älterer Entwurf) hat
+ * keines, dort trennt eine Leerzeile die Zeilen wie in der Bibliothek.
  */
 export function fuehrungZeilen(text: string): string[] {
-    return text.replace(/\r\n?/g, "\n").split(/\n[ \t]*\n/).map(zeile => zeile.replace(/^\s*\n|\n\s*$/g, "").trimEnd()).filter(zeile => zeile.trim() !== "");
+    const normal = text.replace(/\r\n?/g, "\n");
+    const roh = normal.includes(ZEILENENDE) ? normal.split(ZEILENENDE) : normal.replace(/\\n/g, "\n").split(/\n[ \t]*\n/);
+    return roh.map(zeile => zeile.replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "").trimEnd()).filter(zeile => zeile.trim() !== "");
 }
 
-/** Umkehrung von `fuehrungZeilen`. Leerzeilen innerhalb einer Zeile fallen weg, damit sie eine Zeile bleibt. */
+/** Umkehrung von `fuehrungZeilen`. Leerzeilen innerhalb einer Zeile bleiben stehen. */
 export function fuehrungText(zeilen: readonly string[]): string {
-    return zeilen.map(zeile => zeile.replace(/\r\n?/g, "\n").replace(/\n[ \t]*(?=\n)/g, "").replace(/^\n+|\n+$/g, "").trimEnd())
-        .filter(zeile => zeile.trim() !== "").join("\n\n");
+    return zeilen.map(zeile => zeile.replace(/\r\n?/g, "\n").replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "").trimEnd())
+        .filter(zeile => zeile.trim() !== "").map(zeile => `${zeile}${ZEILENENDE}`).join("");
 }
 
 /** Ob irgendein Feld etwas enthält. */
