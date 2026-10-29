@@ -7,7 +7,8 @@ export type Feldschluessel =
     | "absender" | "einsatz" | "laufendeNummer" | "empfaenger"
     | Unterpunkt | "auftrag" | "fuehrung"
     | "ortDatum" | "unterschrift" | "dienststelle"
-    | "abgesandtAm" | "abgesandtUm" | "abgesandtVon";
+    | "abgesandtAm" | "abgesandtUm" | "abgesandtVon"
+    | "uebung";
 
 export interface Feld {
     readonly schluessel: Feldschluessel;
@@ -56,6 +57,14 @@ function unterpunktFeld(kennung: Unterpunkt): Feld {
 export const FELDER: readonly Feld[] = [
     { schluessel: "absender", titel: "Absender", beschreibung: "Wer den Auftrag erteilt.", beispiel: "ZTr TZ OV Oldenburg", breite: 22 },
     { schluessel: "einsatz", titel: "Für den Einsatz", beschreibung: "Bezeichnung des Einsatzes.", beispiel: "Hochwasser Hunte 2026", auch: ["Einsatz"], breite: 22 },
+    {
+        schluessel: "uebung",
+        titel: "Übung",
+        beschreibung: "„ja“ oder „x“, wenn der Auftrag zu einer Übung gehört: Jede Seite trägt dann quer das Wasserzeichen „ÜBUNG“, die Fußzeile nennt es. Leer oder „nein“ bei einem echten Einsatz.",
+        beispiel: "ja",
+        auch: ["Ist Übung", "Übungsauftrag"],
+        breite: 8
+    },
     { schluessel: "laufendeNummer", titel: "Lfd. Nr.", beschreibung: "Laufende Nummer des Auftrags.", beispiel: "12", auch: ["Laufende Nummer", "Nr", "Nummer"], breite: 9 },
     { schluessel: "empfaenger", titel: "Empfänger", beschreibung: "Wer den Auftrag erhält.", beispiel: "B-Gruppe 1. TZ", breite: 22 },
     ...UNTERPUNKTE.filter(punkt => punkt.startsWith("1")).map(unterpunktFeld),
@@ -88,6 +97,11 @@ export const FELDER: readonly Feld[] = [
 
 export type Werte = Partial<Record<Feldschluessel, string>>;
 
+/** Ob ein Tabellenwert „ja“ meint: ja, j, x, wahr, true, 1, yes; alles andere nicht. */
+export function istJa(wert: string | undefined): boolean {
+    return ["ja", "j", "x", "wahr", "true", "1", "yes"].includes((wert ?? "").trim().toLowerCase());
+}
+
 /** Werte der Maske oder einer Tabellenzeile in die Daten der Bibliothek. */
 export function zuDaten(werte: Werte): EinsatzauftragDaten {
     const wert = (schluessel: Feldschluessel) => werte[schluessel] ?? "";
@@ -104,7 +118,8 @@ export function zuDaten(werte: Werte): EinsatzauftragDaten {
         dienststelle: wert("dienststelle"),
         abgesandtAm: wert("abgesandtAm"),
         abgesandtUm: wert("abgesandtUm"),
-        abgesandtVon: wert("abgesandtVon")
+        abgesandtVon: wert("abgesandtVon"),
+        uebung: istJa(werte.uebung)
     };
 }
 
@@ -122,9 +137,9 @@ export function fuehrungText(zeilen: readonly string[]): string {
         .filter(zeile => zeile.trim() !== "").join("\n\n");
 }
 
-/** Ob irgendein Feld etwas enthält. */
+/** Ob irgendein Feld etwas enthält. Ein „nein“ bei Übung zählt nicht. */
 export function hatInhalt(werte: Werte): boolean {
-    return FELDER.some(feld => (werte[feld.schluessel] ?? "").trim() !== "");
+    return FELDER.some(feld => feld.schluessel === "uebung" ? istJa(werte.uebung) : (werte[feld.schluessel] ?? "").trim() !== "");
 }
 
 function normal(text: string): string {

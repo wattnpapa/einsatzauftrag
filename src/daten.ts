@@ -32,6 +32,12 @@ export interface EinsatzauftragDaten {
     abgesandtAm?: string;
     abgesandtUm?: string;
     abgesandtVon?: string;
+    /**
+     * Der Auftrag gehört zu einer Übung. Jede Seite trägt dann quer das
+     * Wasserzeichen „ÜBUNG“ und die Fußzeile nennt es, damit der Ausdruck nie
+     * für einen echten Auftrag gehalten wird.
+     */
+    uebung?: boolean;
 }
 
 /** Ein Abschnitt des Vordrucks mit gelber Kopfzeile. */

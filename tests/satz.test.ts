@@ -42,7 +42,7 @@ describe("setzeEinsatzauftrag", () => {
         const daten: EinsatzauftragDaten = { auftrag: Array(80).fill(satz).join(" ") };
         for (const seite of setzeEinsatzauftrag(neuePdf(), daten).seiten) {
             for (const element of seite.elemente) {
-                const ys = element.art === "linie" ? [element.y1, element.y2] : element.art === "text" ? [element.y] : [element.y, element.y + element.h];
+                const ys = element.art === "linie" ? [element.y1, element.y2] : element.art === "text" || element.art === "wasserzeichen" ? [element.y] : [element.y, element.y + element.h];
                 for (const y of ys) {
                     expect(y).toBeGreaterThanOrEqual(0);
                     expect(y).toBeLessThanOrEqual(292);
@@ -58,6 +58,7 @@ describe("setzeEinsatzauftrag", () => {
             for (const e of seite.elemente) {
                 const [links, rechts] = e.art === "linie" ? [Math.min(e.x1, e.x2), Math.max(e.x1, e.x2)]
                     : e.art === "text" ? (e.ausrichtung === "links" ? [e.x, e.x + e.breite] : e.ausrichtung === "rechts" ? [e.x - e.breite, e.x] : [e.x - e.breite / 2, e.x + e.breite / 2])
+                    : e.art === "wasserzeichen" ? [e.x, e.x]
                     : [e.x, e.x + e.b];
                 expect(links).toBeGreaterThanOrEqual(25 - 1e-9);
                 expect(rechts).toBeLessThanOrEqual(190 + 1e-9);
@@ -131,6 +132,28 @@ describe("setzeEinsatzauftrag", () => {
         expect(alle).not.toContain("Hilfswerk");
     });
 
+    it("legt bei einer Übung das Wasserzeichen „ÜBUNG“ unter jede Seite und nennt es in der Fußzeile", () => {
+        const ergebnis = setzeEinsatzauftrag(neuePdf(), { uebung: true, laufendeNummer: "7", auftrag: Array(60).fill(satz).join(" ") });
+        expect(ergebnis.seiten.length).toBeGreaterThan(1);
+        for (const seite of ergebnis.seiten) {
+            const erstes = seite.elemente[0];
+            expect(erstes?.art).toBe("wasserzeichen");
+            if (erstes?.art === "wasserzeichen") {
+                expect(erstes.text).toBe("ÜBUNG");
+                expect(erstes.winkel).toBe(45);
+                // Der Schriftzug liegt diagonal in der Mitte: Anfang links unten, Ende rechts oben, beides im Blatt.
+                expect(erstes.x).toBeGreaterThan(0);
+                expect(erstes.x + erstes.breite * Math.SQRT1_2).toBeLessThan(210);
+                expect(erstes.y).toBeLessThan(297);
+                expect(erstes.y - erstes.breite * Math.SQRT1_2).toBeGreaterThan(0);
+            }
+            expect(texte(seite).some(text => text.startsWith("ÜBUNG · lfd. Nr. 7 · Seite"))).toBe(true);
+        }
+        const ohne = setzeEinsatzauftrag(neuePdf(), { laufendeNummer: "7" });
+        expect(ohne.seiten[0]?.elemente.some(element => element.art === "wasserzeichen")).toBe(false);
+        expect(texte(ohne.seiten[0])).toContain("lfd. Nr. 7 · Seite 1 von 1");
+    });
+
     it("setzt ein Logo rechts in den Kopf", () => {
         const logo = { daten: "data:image/png;base64,AAAA", format: "PNG" as const, breite: 200, hoehe: 100 };
         const seite = setzeEinsatzauftrag(neuePdf(), {}, { logo }).seiten[0];
@@ -174,6 +197,16 @@ describe("zeichneEinsatzauftrag", () => {
         expect(erste).toContain("Einsatzauftrag");
         expect(erste).toContain("bung");
         expect(inhalt()).toBe(erste);
+    });
+});
+
+describe("Wasserzeichen", () => {
+    it("wird gedreht in die PDF geschrieben und lässt die Schrift danach schwarz", () => {
+        const pdf = neuePdf();
+        zeichneEinsatzauftrag(pdf, { uebung: true });
+        expect(pdf.getTextColor()).toBe("#000000");
+        // Gedrehter Text steht in der PDF mit einer Drehmatrix (cos 45° ≈ 0,707).
+        expect(pdf.output()).toMatch(/0\.70\d+ 0\.70\d+ -0\.70\d+ 0\.70\d+ [\d.]+ [\d.]+ Tm/);
     });
 });
 

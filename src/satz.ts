@@ -41,6 +41,21 @@ export type Element =
         readonly y: number;
         readonly b: number;
         readonly h: number;
+    }
+    /**
+     * Wasserzeichen: großer, blasser, fetter Text quer über die Seite, hinter
+     * allem anderen. `x`/`y` ist der Anfang der Grundlinie, `winkel` die
+     * Drehung gegen den Uhrzeigersinn in Grad, `breite` die ungedrehte Breite.
+     */
+    | {
+        readonly art: "wasserzeichen";
+        readonly text: string;
+        readonly x: number;
+        readonly y: number;
+        readonly groesse: number;
+        readonly farbe: string;
+        readonly winkel: number;
+        readonly breite: number;
     };
 
 export interface Seite {
@@ -130,6 +145,8 @@ const GELB = "#ffffa6";
 const BLAU = "#0000f5";
 const SCHWARZ = "#000000";
 const GRAU = "#555555";
+/** Wasserzeichen einer Übung: blass genug, dass der Text darüber lesbar bleibt, kräftig genug für den Drucker. */
+const WASSERZEICHEN = { text: "ÜBUNG", groesse: 120, winkel: 45, farbe: "#d4d4d4" } as const;
 
 const PT = 25.4 / 72;
 const SCHRIFT_BESCHRIFTUNG = 10;
@@ -196,6 +213,8 @@ function druckbareDaten(daten: EinsatzauftragDaten): EinsatzauftragDaten {
     for (const [schluessel, wert] of Object.entries(daten) as [keyof EinsatzauftragDaten, unknown][]) {
         if (typeof wert === "string") {
             (ergebnis as Record<string, unknown>)[schluessel] = fuerPdf(wert);
+        } else if (typeof wert === "boolean") {
+            (ergebnis as Record<string, unknown>)[schluessel] = wert;
         } else if (wert && typeof wert === "object") {
             (ergebnis as Record<string, unknown>)[schluessel] = Object.fromEntries(Object.entries(wert as Record<string, unknown>)
                 .map(([punkt, text]) => [punkt, typeof text === "string" ? fuerPdf(text) : text]));
@@ -246,6 +265,10 @@ class Setzer {
         this.elemente = [];
         this.seiten.push(this.elemente);
         this.y = OBEN;
+        // Zuerst, damit alles Weitere darüber liegt.
+        if (this.daten.uebung) {
+            this.wasserzeichen();
+        }
         this.kopf();
         this.y += KOPF_HOEHE + this.abstand;
     }
@@ -261,6 +284,22 @@ class Setzer {
         this.pdf.setFont("helvetica", fett ? "bold" : "normal");
         this.pdf.setFontSize(groesse);
         this.elemente.push({ art: "text", text, x, y, groesse, fett, farbe, ausrichtung, breite: this.pdf.getTextWidth(text) });
+    }
+
+    /** „ÜBUNG“ diagonal über die Mitte des Formulars, auf jeder Seite gleich. */
+    private wasserzeichen(): void {
+        const { text, groesse, winkel, farbe } = WASSERZEICHEN;
+        this.pdf.setFont("helvetica", "bold");
+        this.pdf.setFontSize(groesse);
+        const breite = this.pdf.getTextWidth(text);
+        const hoehe = groesse * PT * 0.72;
+        const bogen = winkel * Math.PI / 180;
+        // Die Mitte des Schriftzugs liegt auf der Mitte des Formulars; der Anker
+        // ist der Anfang der Grundlinie, also halbe Breite zurück entlang der
+        // gedrehten Zeile und halbe Versalhöhe nach unten quer dazu.
+        const x = (LINKS + RECHTS) / 2 - (breite / 2) * Math.cos(bogen) + (hoehe / 2) * Math.sin(bogen);
+        const y = (OBEN + UNTEN) / 2 + (breite / 2) * Math.sin(bogen) + (hoehe / 2) * Math.cos(bogen);
+        this.elemente.push({ art: "wasserzeichen", text, x, y, groesse, farbe, winkel, breite });
     }
 
     private linie(x1: number, y1: number, x2: number, y2: number, staerke = STRICH): void {
@@ -588,7 +627,7 @@ class Setzer {
         const nummer = (this.daten.laufendeNummer ?? "").replace(/\s+/g, " ").trim();
         this.seiten.forEach((seite, index) => {
             this.elemente = seite;
-            const rechts = [nummer ? `lfd. Nr. ${nummer}` : "", `Seite ${index + 1} von ${anzahl}`].filter(Boolean).join(" · ");
+            const rechts = [this.daten.uebung ? "ÜBUNG" : "", nummer ? `lfd. Nr. ${nummer}` : "", `Seite ${index + 1} von ${anzahl}`].filter(Boolean).join(" · ");
             this.pdf.setFont("helvetica", "normal");
             this.pdf.setFontSize(7);
             const rechtsText = kuerzeAufBreite(this.pdf, rechts, BREITE / 2);

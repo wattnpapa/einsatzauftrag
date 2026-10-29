@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import "./seite.js";
 import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
-import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, istJa, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -272,6 +272,19 @@ function baueMaske(): void {
     reihe = zeile(kopf);
     eingabe(reihe, "einsatz", "Für den Einsatz", "input", "", "z. B. Hochwasser Hunte 2026");
     eingabe(reihe, "empfaenger", "Empfänger", "input", "", "z. B. B-Gruppe 1. TZ");
+    // Übungskennzeichen wie im Erfassungsbogen: ein Haken, der bis ins PDF sichtbar bleibt.
+    const uebung = document.createElement("label");
+    uebung.className = "inline uebung-wahl";
+    const haken = document.createElement("input");
+    haken.type = "checkbox";
+    haken.name = "uebung";
+    haken.value = "ja";
+    uebung.append(haken, " Dies ist eine Übung");
+    kopf.appendChild(uebung);
+    const uebungHinweis = document.createElement("p");
+    uebungHinweis.className = "hinweis";
+    uebungHinweis.textContent = "Jede Seite trägt dann quer das Wasserzeichen „ÜBUNG“, in Vorschau und PDF. „Nächster Auftrag“ behält den Haken.";
+    kopf.appendChild(uebungHinweis);
 
     for (const abschnitt of ABSCHNITTE) {
         const behaelter = karte(`${abschnitt.nummer}. ${abschnitt.titel}`, abschnitt.unterpunkte.length > 0 ? undefined : abschnitt.erlaeuterung);
@@ -347,10 +360,18 @@ function steuerelemente(): (HTMLInputElement | HTMLTextAreaElement)[] {
     return FELDER.map(eintrag => maske.elements.namedItem(eintrag.schluessel) as HTMLInputElement | HTMLTextAreaElement);
 }
 
+function istHaken(steuer: HTMLInputElement | HTMLTextAreaElement): steuer is HTMLInputElement {
+    return steuer instanceof HTMLInputElement && steuer.type === "checkbox";
+}
+
 function werteDerMaske(): Werte {
     const werte: Werte = {};
     for (const steuer of steuerelemente()) {
-        if (steuer.value) {
+        if (istHaken(steuer)) {
+            if (steuer.checked) {
+                werte[steuer.name as Feldschluessel] = steuer.value;
+            }
+        } else if (steuer.value) {
             werte[steuer.name as Feldschluessel] = steuer.value;
         }
     }
@@ -359,6 +380,10 @@ function werteDerMaske(): Werte {
 
 function setzeWerte(werte: Werte): void {
     for (const steuer of steuerelemente()) {
+        if (istHaken(steuer)) {
+            steuer.checked = istJa(werte[steuer.name as Feldschluessel]);
+            continue;
+        }
         steuer.value = werte[steuer.name as Feldschluessel] ?? "";
         if (steuer instanceof HTMLTextAreaElement) {
             anpassen(steuer);
@@ -414,7 +439,9 @@ function vorschauBald(): void {
 }
 
 function vorschauJetzt(): void {
-    const satz = setzeEinsatzauftrag(messPdf, zuDaten(werteDerMaske()), { fusszeile: HERKUNFT, ...optionen() });
+    const werte = werteDerMaske();
+    el("uebungs-band").hidden = !istJa(werte.uebung);
+    const satz = setzeEinsatzauftrag(messPdf, zuDaten(werte), { fusszeile: HERKUNFT, ...optionen() });
     if (vorschauSichtbar) {
         zeigeSeiten(el("vorschau-seiten"), satz.seiten);
     }
@@ -626,7 +653,11 @@ function zeigeTabelle(): void {
     const seiten = tabelle.zeilen.map(zeile => setzeEinsatzauftrag(messPdf, zuDaten(zeile.werte), satzOptionen).seiten.length);
     const summe = seiten.reduce((a, b) => a + b, 0);
     const anzahl = tabelle.zeilen.length;
-    el("ergebnis-zusammenfassung").textContent = `${tabelle.name}: ${anzahl === 1 ? "1 Einsatzauftrag" : `${anzahl} Einsatzaufträge`} auf ${summe === 1 ? "1 Seite" : `${summe} Seiten`}. Jeder Auftrag beginnt auf einer neuen Seite.`;
+    const uebungen = tabelle.zeilen.filter(zeile => istJa(zeile.werte.uebung)).length;
+    const uebungsText = uebungen === 0 ? "" : uebungen === anzahl
+        ? ` ${anzahl === 1 ? "Er ist" : "Alle sind"} als Übung gekennzeichnet und ${anzahl === 1 ? "trägt" : "tragen"} das Wasserzeichen „ÜBUNG“.`
+        : ` ${uebungen === 1 ? "Einer davon ist" : `${uebungen} davon sind`} als Übung gekennzeichnet (Spalte „Übung“) und ${uebungen === 1 ? "trägt" : "tragen"} das Wasserzeichen „ÜBUNG“.`;
+    el("ergebnis-zusammenfassung").textContent = `${tabelle.name}: ${anzahl === 1 ? "1 Einsatzauftrag" : `${anzahl} Einsatzaufträge`} auf ${summe === 1 ? "1 Seite" : `${summe} Seiten`}. Jeder Auftrag beginnt auf einer neuen Seite.${uebungsText}`;
     const mehrseitig = seiten.filter(zahl => zahl > 1).length;
     const warnungen = [...tabelle.hinweise];
     if (mehrseitig > 0) {
@@ -649,6 +680,10 @@ function zeigeTabelle(): void {
         };
         zelle(String(zeile.zeile));
         zelle(zeile.werte.laufendeNummer ?? "–", zeile.werte.laufendeNummer ? "" : "ohne");
+        if (istJa(zeile.werte.uebung)) {
+            tr.className = "uebung";
+            tr.title = "Als Übung gekennzeichnet";
+        }
         zelle(zeile.werte.empfaenger ?? "–", zeile.werte.empfaenger ? "" : "ohne");
         const auftrag = (zeile.werte.auftrag ?? "").replace(/\s+/g, " ");
         zelle(auftrag ? (auftrag.length > 80 ? `${auftrag.slice(0, 79)}…` : auftrag) : "–", auftrag ? "" : "ohne");

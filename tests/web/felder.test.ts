@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UNTERPUNKTE } from "../../src/index.js";
-import { FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
+import { FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, istJa, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
 
 describe("FELDER", () => {
     it("hat jedes Feld genau einmal, alle Unterpunkte eingeschlossen", () => {
@@ -78,6 +78,20 @@ describe("zuDaten", () => {
         expect(hatInhalt({})).toBe(false);
         expect(hatInhalt({ auftrag: "  " })).toBe(false);
         expect(hatInhalt({ "4g": "Handkasse" })).toBe(true);
+        expect(hatInhalt({ uebung: "nein" })).toBe(false);
+        expect(hatInhalt({ uebung: "ja" })).toBe(true);
+    });
+
+    it("liest die Übungskennzeichnung aus Haken und Tabellenspalte", () => {
+        expect(zuDaten({ uebung: "ja" }).uebung).toBe(true);
+        expect(zuDaten({ uebung: "X" }).uebung).toBe(true);
+        expect(zuDaten({ uebung: "nein" }).uebung).toBe(false);
+        expect(zuDaten({}).uebung).toBe(false);
+        expect(istJa(" Ja ")).toBe(true);
+        expect(istJa("vielleicht")).toBe(false);
+        expect(feldZuKopf("Übung")).toBe("uebung");
+        expect(feldZuKopf("Ist Übung")).toBe("uebung");
+        expect(leseTabelle([["Empfänger", "Übung"], ["Gruppe A", "x"]]).zeilen[0]?.werte.uebung).toBe("x");
     });
 });
 

@@ -55,6 +55,8 @@ Die erste Seite landet auf der aktuellen Seite der PDF, weitere werden angehäng
 | `schriftgroesse` | feste Schriftgröße der Eintragungen in pt statt der automatischen Wahl |
 | `fusszeile` | kleiner Text links unten am Blattrand |
 
+Mit `uebung: true` in den Daten trägt jede Seite quer das blasse Wasserzeichen „ÜBUNG“ hinter dem Formular, und die Fußzeile nennt es, wie beim Erfassungsbogen: Ein Übungsauftrag wird so nie für einen echten gehalten.
+
 ## Entwicklung
 
 ```bash
