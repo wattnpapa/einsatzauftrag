@@ -22,10 +22,12 @@ export interface EinsatzauftragDaten {
     /** Abschnitt 2, erhaltener Auftrag. */
     auftrag?: string;
     /**
-     * Abschnitt 5. Zeilenumbrüche bleiben in der Zelle erhalten; eine Leerzeile
-     * beginnt eine neue Formularzeile. Mindestens zwei Zeilen wie im Vordruck.
+     * Abschnitt 5. Zeilenumbrüche bleiben in der Zelle erhalten. Als Text
+     * beginnt eine Leerzeile eine neue Formularzeile; als Liste ist jeder
+     * Eintrag eine Formularzeile, Leerzeilen darin bleiben stehen.
+     * Mindestens zwei Zeilen wie im Vordruck.
      */
-    fuehrung?: string;
+    fuehrung?: string | readonly string[];
     ortDatum?: string;
     unterschrift?: string;
     dienststelle?: string;

@@ -235,6 +235,18 @@ describe("Abschnitt 5", () => {
         expect(zellen).toHaveLength(3);
     });
 
+    it("setzt jeden Eintrag einer Liste als eigene Zeile und behält Leerzeilen darin", () => {
+        const seite = setzeEinsatzauftrag(neuePdf(), { fuehrung: ["\nErreichbarkeiten:\n\nFüSt Rostock\n\n\nTel. 1\n\n", "", "Führungsstelle Südtor 8"] }, { schriftgroesse: 10 }).seiten[0];
+        const y = (text: string) => (seite?.elemente ?? []).find((e): e is Extract<Element, { art: "text" }> => e.art === "text" && e.text === text)?.y ?? NaN;
+        const zeile = 10 * 25.4 / 72 * 1.18;
+        // Eine Leerzeile ist eine Zeile Abstand, zwei sind zwei.
+        expect(y("FüSt Rostock") - y("Erreichbarkeiten:")).toBeCloseTo(2 * zeile);
+        expect(y("Tel. 1") - y("FüSt Rostock")).toBeCloseTo(3 * zeile);
+        const zellen = (seite?.elemente ?? []).filter(e => e.art === "linie" && e.y1 === e.y2 && e.x1 === 25 && e.x2 === 190
+            && e.y1 > y("Erreichbarkeiten:") - 6 && e.y1 < y("Führungsstelle Südtor 8"));
+        expect(zellen).toHaveLength(2);
+    });
+
     it("hat ohne Text zwei leere Zeilen wie der Vordruck", () => {
         const mitText = setzeEinsatzauftrag(neuePdf(), { fuehrung: "A\nB" }, { schriftgroesse: 10 }).seiten[0];
         const leer = setzeEinsatzauftrag(neuePdf(), {}, { schriftgroesse: 10 }).seiten[0];

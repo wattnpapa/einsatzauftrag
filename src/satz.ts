@@ -215,6 +215,8 @@ function druckbareDaten(daten: EinsatzauftragDaten): EinsatzauftragDaten {
             (ergebnis as Record<string, unknown>)[schluessel] = fuerPdf(wert);
         } else if (typeof wert === "boolean") {
             (ergebnis as Record<string, unknown>)[schluessel] = wert;
+        } else if (Array.isArray(wert)) {
+            (ergebnis as Record<string, unknown>)[schluessel] = wert.map(text => typeof text === "string" ? fuerPdf(text) : text);
         } else if (wert && typeof wert === "object") {
             (ergebnis as Record<string, unknown>)[schluessel] = Object.fromEntries(Object.entries(wert as Record<string, unknown>)
                 .map(([punkt, text]) => [punkt, typeof text === "string" ? fuerPdf(text) : text]));
@@ -465,10 +467,14 @@ class Setzer {
         if (abschnitt.nummer === 2) {
             return [{ kennung: "", zeilen: this.umbrich(this.daten.auftrag, breite), mindesthoehe: AUFTRAG_MIN }];
         }
-        // Abschnitt 5: Zeilenumbrüche bleiben in der Zelle wie bei 3c; erst eine
-        // Leerzeile beginnt eine neue Formularzeile. Mindestens zwei wie im Vordruck.
-        const absaetze = String(this.daten.fuehrung ?? "").replace(/\\n/g, "\n").replace(/\r\n?/g, "\n")
-            .split(/\n[ \t]*\n/).map(absatz => absatz.replace(/^\s*\n|\n\s*$/g, "").trimEnd()).filter(absatz => absatz.trim() !== "");
+        // Abschnitt 5: Zeilenumbrüche bleiben in der Zelle wie bei 3c. Als Text
+        // beginnt erst eine Leerzeile eine neue Formularzeile; als Liste ist jeder
+        // Eintrag eine Formularzeile und behält auch seine Leerzeilen.
+        // Mindestens zwei Zeilen wie im Vordruck.
+        const fuehrung = this.daten.fuehrung ?? "";
+        const normal = (text: unknown) => String(text ?? "").replace(/\\n/g, "\n").replace(/\r\n?/g, "\n");
+        const roh = Array.isArray(fuehrung) ? fuehrung.map(normal) : normal(fuehrung).split(/\n[ \t]*\n/);
+        const absaetze = roh.map(absatz => absatz.replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "").trimEnd()).filter(absatz => absatz.trim() !== "");
         while (absaetze.length < 2) {
             absaetze.push("");
         }

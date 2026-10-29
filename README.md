@@ -42,6 +42,8 @@ console.log(satz.seiten.length, satz.schriftgroesse);
 pdf.save("einsatzauftrag.pdf");
 ```
 
+In `fuehrung` (Abschnitt 5) beginnt eine Leerzeile eine neue Formularzeile. Sollen Leerzeilen innerhalb einer Formularzeile stehen bleiben, die Zeilen als Liste übergeben: `fuehrung: ["Erreichbarkeiten:\n\nFüSt Rostock", "Führungsstelle Südtor 8"]`.
+
 Die erste Seite landet auf der aktuellen Seite der PDF, weitere werden angehängt. Für mehrere Aufträge in einer Datei vor jedem weiteren `pdf.addPage()` aufrufen.
 
 `setzeEinsatzauftrag(pdf, daten, optionen)` rechnet nur den Satz aus und gibt je Seite eine Liste einfacher Zeichenelemente zurück (Fläche, Linie, Text, Bild in mm). Die Web-App zeichnet daraus ihre Vorschau als SVG; `zeichneSeite(pdf, seite)` zeichnet eine Seite in die PDF.
