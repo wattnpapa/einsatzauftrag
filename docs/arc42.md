@@ -219,8 +219,8 @@ Die Fassung (Bauzeit in UTC und Commit) steht im Fuß der App und im Service Wor
 
 | Schlüssel | Inhalt |
 | --- | --- |
-| `ea.entwurf.v1` | Eingaben der Maske samt Zeitpunkt der letzten Änderung |
-| `ea.einstellungen.v1` | Kennung, Organisation, Schriftwahl |
+| `ea.entwurf.v1` | Eingaben der Maske samt Zeitpunkt der letzten Änderung; wird beim Start gelöscht, wenn älter als die Frist (24 Stunden, wählbar 7 Tage oder gar nicht gespeichert) |
+| `ea.einstellungen.v1` | Kennung, Organisation, Schriftwahl, Frist des Entwurfs |
 | `ea.logo.v1` | Selbst gewähltes Logo als PNG-Datenadresse |
 | `ea.anzeigemodus.v1` | Standard, Dunkel, Feld oder Nacht |
 | `ea.vorschau.v1` | Vorschau ein- oder ausgeblendet |
@@ -246,7 +246,7 @@ Die Verarbeitung von Auftragsinhalten bleibt auf dem Gerät. Offen bleibt, was d
 
 - Es gibt keine Cookies.
 - Das einzige nachgeladene Skript fremder Herkunft ist `gc.zgo.at/count.js`. Es läuft im Kontext der Seite und könnte deren Inhalt lesen; das ist als Risiko in der DSFA geführt.
-- Es ist keine Content Security Policy gesetzt. GitHub Pages erlaubt keine eigenen Header; ein `<meta http-equiv="Content-Security-Policy">` ist möglich und als Maßnahme vorgesehen (siehe Abschnitt 11).
+- Jede Seite trägt eine Content Security Policy als `<meta>`, weil GitHub Pages keine eigenen Header erlaubt. `vite.config.ts` (Plugin `sicherheit`) setzt sie beim Bauen ein und gibt die kurzen Inline-Skripte und das Inline-Stylesheet über ihren SHA-256-Hash frei. Fremde Skripte sind nur von `gc.zgo.at` erlaubt, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`. `frame-ancestors` lässt sich per `<meta>` nicht setzen. Im Entwicklungsserver gilt die Policy nicht.
 - Eingaben werden nie als HTML eingefügt, sondern über `textContent`; die Vorschau baut SVG-Elemente aus Zeichenelementen.
 
 ### 8.6 Tests
@@ -297,10 +297,10 @@ Datensparsamkeit, Verlässlichkeit und Treue zum Vordruck stehen oben (Abschnitt
 
 | Nr. | Punkt | Auswirkung | Maßnahme |
 | --- | --- | --- | --- |
-| R1 | Zählskript von `gc.zgo.at` läuft im Seitenkontext und hat Zugriff auf Eingaben. | Ein kompromittiertes Skript könnte Auftragsinhalte lesen. | Zählskript selbst ausliefern (Version festhalten), oder Messung abschalten. Wenigstens eine Content Security Policy per `<meta>` setzen, die Verbindungen nur zu `einsatzauftrag.goatcounter.com` zulässt. |
-| R2 | Keine Content Security Policy. | Eingeschleustes Skript könnte Daten abfließen lassen. | `<meta http-equiv="Content-Security-Policy">` in allen drei Seiten ergänzen und im Build prüfen. |
-| R3 | Entwurf bleibt unverschlüsselt im `localStorage`. | Auf gemeinsam genutzten Geräten lesbar. | Hinweis in der Datenschutzerklärung vorhanden; zusätzlich „Felder leeren“ prominent halten, optional automatisches Verwerfen nach einer einstellbaren Frist. |
-| R4 | Link und PDF enthalten alle Eingaben lesbar. | Weitergabe über Messenger oder Mail fügt einen Dritten hinzu. | Hinweis neben der Funktion „Link teilen“; Entscheidung der einsetzenden Stelle, ob die Funktion freigegeben ist. |
+| R1 | Zählskript von `gc.zgo.at` läuft im Seitenkontext und hat Zugriff auf Eingaben. | Ein kompromittiertes Skript könnte Auftragsinhalte lesen. Die CSP verhindert nur das Senden an andere Ziele als GoatCounter, nicht das Lesen. | Zählskript selbst ausliefern (Version festhalten) oder Messung abschalten (offen, DSFA M2). |
+| R2 | Ohne `frame-ancestors` und ohne eigene Header kann die Seite eingebettet werden. | Clickjacking auf die Maske. | Im Browser-Skript prüfen, ob `window.top` gleich `window` ist, oder anderen Host mit Headern wählen. |
+| R3 | Entwurf bleibt bis zur Frist unverschlüsselt im `localStorage`. | Auf gemeinsam genutzten Geräten lesbar. | Frist 24 Stunden, wählbar; Hinweis in der Datenschutzerklärung. Verschlüsselung wäre ohne Schlüsselverwaltung wirkungslos. |
+| R4 | Link und PDF enthalten alle Eingaben lesbar. | Weitergabe über Messenger oder Mail fügt einen Dritten hinzu. | Hinweise neben der Funktion und in der Meldung nach dem Kopieren sind da; Abschalten der Funktion für die einsetzende Stelle offen (DSFA M4). |
 | R5 | `main.ts` hat rund 900 Zeilen und keine automatischen Tests. | Regressionen in der Oberfläche fallen spät auf. | Browsertests mit Playwright für die Hauptwege (Maske, PDF, Tabelle, Link). |
 | R6 | Service Worker ist nicht automatisiert getestet. | Fehler zeigen sich erst im Betrieb. | Test der Cache-Logik mit einem Browsertest. |
 | R7 | Maße sind an einem Bild des Word-Formulars abgenommen. | Abweichungen bei Änderung des Vordrucks. | Vordruck und Maße bei jeder neuen Fassung des Fb Fü 3 vergleichen. |

@@ -46,7 +46,7 @@ Zweck: Einsatzaufträge nach dem Vordruck Fb Fü 3 am Bildschirm ausfüllen und 
 
 Art der Verarbeitung: Erfassen, Anzeigen, Speichern des Entwurfs im Browser, Verdichten und Kodieren, Ausgeben als PDF, Download, Einlesen von PDF, Tabelle, Link. Alles im Browser.
 
-Zeitlicher Rahmen: Der Entwurf bleibt im lokalen Speicher, bis der Nutzer ihn leert oder die Websitedaten löscht. Eine automatische Frist gibt es nicht.
+Zeitlicher Rahmen: Der Entwurf bleibt im lokalen Speicher, bis der Nutzer ihn leert, die Websitedaten löscht oder die Frist (Standard 24 Stunden nach der letzten Änderung) bei einem späteren Start abgelaufen ist.
 
 ### 3.3 Datenkategorien und Betroffene
 
@@ -97,7 +97,7 @@ Zweckbindung. Die Daten werden nur zum Ausfüllen und Ausgeben des Vordrucks ver
 
 Datenminimierung. Alle Felder des Vordrucks sind optional. Die App fragt keine Konten, keine Kennungen und keine Pflichtangaben ab. Der Betreiber erhält keine Auftragsinhalte. Das ist die stärkste Maßnahme dieser Verarbeitung und der Grund, warum das Risiko für die Betroffenen insgesamt gering bleibt.
 
-Speicherbegrenzung. Verbesserungswürdig: Der Entwurf bleibt unbegrenzt im Browser. Der Nutzer kann ihn mit "Felder leeren" entfernen, eine Frist gibt es nicht (Maßnahme M5).
+Speicherbegrenzung. Der Entwurf wird 24 Stunden nach der letzten Änderung beim nächsten Start gelöscht; der Nutzer kann 7 Tage wählen oder das Speichern abschalten. Mit "Felder leeren" entfernt er ihn sofort (Maßnahme M5). Die Löschung geschieht beim nächsten Öffnen der App, nicht durch eine Uhr im Hintergrund.
 
 Rechtsgrundlage der Inhalte. Sie liegt bei der einsetzenden Stelle, bei Behörden regelmäßig in einer Aufgabenzuweisung (Art. 6 Abs. 1 lit. e DSGVO mit der jeweiligen Rechtsgrundlage, bei Gesundheitsdaten zusätzlich Art. 9 Abs. 2). Die App legt keine Grundlage fest.
 
@@ -147,16 +147,19 @@ Bewertung der Risiken zu Rechten und Freiheiten: Für alle genannten Risiken au�
 | B11 | Wasserzeichen "ÜBUNG" auf jeder Seite, Fußzeile nennt es; Übungsband in der Maske. | R9 |
 | B12 | Tabellen werden nicht gespeichert. Der Cache enthält nur statische Dateien. | R11 |
 | B13 | Quelloffen unter EUPL-1.2, Tests für Satz, Austausch, Tabellen und PDF. | R5, R8 |
+| B14 | Content Security Policy in allen drei Seiten (Maßnahme M1): `default-src 'none'`, Skripte nur von der eigenen Herkunft, `gc.zgo.at` und per Hash freigegebene Inline-Skripte, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, kein `object`, keine fremden Formularziele. | R4, R5 |
+| B15 | Hinweise neben "Link teilen", in der Meldung nach dem Kopieren und neben dem PDF-Download (Maßnahme M3). | R2, R3 |
+| B16 | Entwurf verfällt nach 24 Stunden, wählbar 7 Tage oder gar nicht speichern (Maßnahme M5). | R1, R11 |
 
 ### 6.2 Zusätzliche Maßnahmen
 
 | Nr. | Maßnahme | Wirkt auf | Verantwortlich | Stand |
 | --- | --- | --- | --- | --- |
-| M1 | Content Security Policy per `<meta http-equiv>` in allen drei Seiten: Skripte nur von der eigenen Herkunft und von `gc.zgo.at`, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, keine Inline-Skripte außer den kurzen, mit Hash freigegebenen. | R4, R5 | Betreiber | offen |
+| M1 | Content Security Policy per `<meta http-equiv>` in allen drei Seiten: Skripte nur von der eigenen Herkunft und von `gc.zgo.at`, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, keine Inline-Skripte außer den kurzen, mit Hash freigegebenen. Wird beim Bauen eingesetzt (`sicherheit()` in `web/vite.config.ts`). | R4, R5 | Betreiber | umgesetzt |
 | M2 | Zählskript selbst ausliefern oder auf die Messung verzichten, sobald die Bewertung der einsetzenden Stelle das verlangt. Alternativ Messung serverseitig über die Logs des Hosters. | R4 | Betreiber | offen |
-| M3 | Neben "Link teilen" und beim PDF-Download einen kurzen Hinweis anzeigen: enthält alle Eingaben lesbar, nur dorthin weitergeben, wo der Auftrag hin darf. | R2, R3 | Betreiber | offen |
+| M3 | Neben "Link teilen" und beim PDF-Download einen kurzen Hinweis anzeigen: enthält alle Eingaben lesbar, nur dorthin weitergeben, wo der Auftrag hin darf. | R2, R3 | Betreiber | umgesetzt |
 | M4 | Einstellung für die einsetzende Stelle, Link- und Metadaten-Funktion abzuschalten (z. B. über eine Konfigurationsdatei oder einen Parameter beim Bauen). Bei abgeschalteter Metadaten-Funktion trägt die PDF keine Eingaben im Eintrag `Keywords`. | R2, R3 | Betreiber | offen |
-| M5 | Entwurf nach einer Frist (z. B. 24 Stunden) automatisch verwerfen, Frist einstellbar; deutlicher Hinweis beim Start, wenn ein Entwurf vorliegt. | R1, R11 | Betreiber | offen |
+| M5 | Entwurf nach einer Frist automatisch verwerfen: Standard 24 Stunden, wählbar 7 Tage oder keine Speicherung (`Einstellungen.entwurfStunden`). Der Stand unter den Knöpfen nennt die Frist; ein abgelaufener Entwurf wird beim Start mit Meldung gelöscht. | R1, R11 | Betreiber | umgesetzt |
 | M6 | Geräteschutz und Löschung gehören in die Regeln der einsetzenden Stelle: Geräte mit Bildschirmsperre und Verschlüsselung, keine gemeinsam genutzten Konten, privates Fenster auf fremden Geräten. | R1 | Einsetzende Stelle | offen |
 | M7 | Auftragsverarbeitung bzw. Rechtsgrundlage der Übermittlung für GitHub Pages und GoatCounter prüfen und dokumentieren. | R7 | Betreiber | offen |
 | M8 | Verfahrensverzeichnis nach Art. 30 für die Verarbeitung des Betreibers anlegen. | Nachweis | Betreiber | offen |
@@ -165,7 +168,7 @@ Bewertung der Risiken zu Rechten und Freiheiten: Für alle genannten Risiken au�
 
 ## 7. Restrisiko
 
-Nach Umsetzung von M1 bis M5 gilt:
+Mit den umgesetzten Maßnahmen M1, M3 und M5 gilt (M2 und M4 sind offen und senken R4 und R2 weiter):
 
 | Nr. | Restrisiko | Bewertung |
 | --- | --- | --- |
@@ -174,15 +177,15 @@ Nach Umsetzung von M1 bis M5 gilt:
 | R4 | Mit CSP und verbindlichen Zielen deutlich verringert; verbleibt bei eingebundenem Zählskript. | gering |
 | R11 | Vom Nutzer löschbar, nach Frist automatisch. | gering |
 
-Ohne die Maßnahmen M1 bis M5 bleibt das Gesamtrisiko nach meiner Einschätzung gering bis mittel, sofern die Nutzer keine Gesundheitsdaten in die Freitexte schreiben. Für Einsätze, in denen das regelmäßig geschieht, sollte die einsetzende Stelle M4 verlangen und eine eigene Bewertung vornehmen.
+Das Gesamtrisiko ist nach meiner Einschätzung gering, solange die Nutzer keine Gesundheitsdaten in die Freitexte schreiben. Für Einsätze, in denen das regelmäßig geschieht, sollte die einsetzende Stelle M4 verlangen und eine eigene Bewertung vornehmen.
 
 ## 8. Ergebnis
 
 Die Verarbeitung durch die App hat kein hohes Risiko für die Rechte und Freiheiten Betroffener, weil Auftragsinhalte das Gerät nicht verlassen und beim Betreiber nur Verbindungs- und Zähldaten ohne Personenbezug im engeren Sinn anfallen. Eine Konsultation der Aufsichtsbehörde nach Art. 36 DSGVO ist auf dieser Grundlage nicht erforderlich.
 
-Das gilt unter drei Bedingungen: Die einsetzende Stelle verantwortet Inhalte und Geräte selbst. Die offenen Maßnahmen M1 bis M5 werden umgesetzt. Die Punkte in Abschnitt 9 werden geklärt.
+Das gilt unter drei Bedingungen: Die einsetzende Stelle verantwortet Inhalte und Geräte selbst. Die offenen Maßnahmen (M2, M4, M6 bis M9) werden entschieden bzw. umgesetzt. Die Punkte in Abschnitt 9 werden geklärt.
 
-Empfehlung zur Reihenfolge: M1 und M3 sind klein und sofort machbar, M5 ist ein kleiner Eingriff in `main.ts`, M2 und M4 verlangen eine Entscheidung des Betreibers bzw. der einsetzenden Stelle.
+M1, M3 und M5 sind umgesetzt. M2 und M4 verlangen eine Entscheidung des Betreibers bzw. der einsetzenden Stelle.
 
 ## 9. Zu klären
 

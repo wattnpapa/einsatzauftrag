@@ -96,6 +96,14 @@
             <label class="inline"><input type="radio" name="schrift" value="10" /> Immer 10 pt</label>
           </fieldset>
         </div>
+        <div class="zeile">
+          <fieldset class="wahl">
+            <legend>Entwurf auf diesem Gerät</legend>
+            <label class="inline"><input type="radio" name="entwurf-frist" value="24" checked /> 24 Stunden nach der letzten Änderung löschen</label>
+            <label class="inline"><input type="radio" name="entwurf-frist" value="168" /> 7 Tage nach der letzten Änderung löschen</label>
+            <label class="inline"><input type="radio" name="entwurf-frist" value="0" /> Entwurf nicht speichern</label>
+          </fieldset>
+        </div>
         <p class="hinweis">Gilt für Einzelaufträge und Tabellen. Die Kennung „Fb Fü 3“ und „Technisches Hilfswerk“ stehen, wenn die Felder leer bleiben.</p>
       </details>
 
@@ -137,7 +145,8 @@
                 <input id="link-feld" readonly spellcheck="false" />
               </label>
             </div>
-            <p class="hinweis">„Link teilen“ legt alle Eingaben in einen Link; wer ihn öffnet, hat den Auftrag in der Maske. Die Daten stecken im Link selbst, kein Server erhält sie.</p>
+            <p class="hinweis">„Link teilen“ legt alle Eingaben in einen Link; wer ihn öffnet, hat den Auftrag in der Maske. Die Daten stecken im Link selbst, kein Server dieser App erhält sie. Ein Messenger oder Mailprogramm, über das du den Link verschickst, sieht ihn aber und speichert ihn unter Umständen. Gib Link und PDF nur dorthin weiter, wo auch der Auftrag hin darf.</p>
+            <p class="hinweis">Jede PDF aus dieser App trägt die Eingaben zusätzlich lesbar in ihren Metadaten, damit die nächste Schicht sie wieder einlesen kann. Wer die Datei bekommt, bekommt auch diese Daten.</p>
             <p class="hinweis">„Nächster Auftrag“ behält Absender, Einsatz, Lage, Logistik, Führung und Verbindung sowie die Unterschriftszeile, leert Empfänger, Auftrag, Durchführung und „Abgesandt“ und zählt die lfd. Nr. hoch. „Auftrag kopieren“ behält alles für denselben Auftrag an einen weiteren Empfänger und leert nur Empfänger und „Abgesandt“; auch dabei zählt die lfd. Nr. hoch.</p>
             <p class="nebentext" id="entwurf-stand"></p>
             <label class="datei-ziel" id="einzeln-ziel">

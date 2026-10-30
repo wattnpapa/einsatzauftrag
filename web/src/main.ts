@@ -127,9 +127,11 @@ interface Einstellungen {
     kennung: string;
     organisation: string;
     schrift: "auto" | "10";
+    /** Wie lange der Entwurf auf dem Gerät bleibt: Stunden seit der letzten Änderung, 0 = gar nicht. */
+    entwurfStunden: 0 | 24 | 168;
 }
 
-const einstellungen: Einstellungen = { kennung: "", organisation: "", schrift: "auto", ...lies<Partial<Einstellungen>>(EINSTELLUNGEN) };
+const einstellungen: Einstellungen = { kennung: "", organisation: "", schrift: "auto", entwurfStunden: 24, ...lies<Partial<Einstellungen>>(EINSTELLUNGEN) };
 let logo = lies<EinsatzauftragLogo>(LOGO);
 
 function optionen(): EinsatzauftragOptionen {
@@ -153,11 +155,15 @@ function zeigeEinstellungen(): void {
         ? `Eigenes Logo, ${logo.breite} × ${logo.hoehe} Pixel. Es bleibt nur auf diesem Gerät.`
         : "Kein Logo. Ein eigenes Bild (PNG, JPEG, SVG) bleibt nur auf diesem Gerät.";
     el("logo-entfernen").hidden = !logo;
+    for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="entwurf-frist"]')) {
+        knopf.checked = Number(knopf.value) === einstellungen.entwurfStunden;
+    }
     const teile = [
         einstellungen.kennung.trim() || "Fb Fü 3",
         einstellungen.organisation.trim().replace(/\s*\n\s*/g, " ") || "Technisches Hilfswerk",
         logo ? "mit Logo" : "",
-        einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch"
+        einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch",
+        einstellungen.entwurfStunden === 0 ? "Entwurf nicht gespeichert" : einstellungen.entwurfStunden === 24 ? "Entwurf 24 Stunden" : "Entwurf 7 Tage"
     ];
     el("einstellungen-stand").textContent = teile.filter(Boolean).join(" · ");
 }
@@ -183,6 +189,19 @@ for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="sch
     knopf.addEventListener("change", () => {
         einstellungen.schrift = knopf.value === "10" ? "10" : "auto";
         einstellungenGeaendert();
+    });
+}
+for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="entwurf-frist"]')) {
+    knopf.addEventListener("change", () => {
+        const stunden = Number(knopf.value);
+        einstellungen.entwurfStunden = stunden === 0 ? 0 : stunden === 168 ? 168 : 24;
+        einstellungenGeaendert();
+        if (stunden === 0) {
+            merke(ENTWURF, undefined);
+            el("entwurf-stand").textContent = "";
+        } else {
+            geaendert();
+        }
     });
 }
 el<HTMLInputElement>("logo-datei").addEventListener("change", async ereignis => {
@@ -400,6 +419,10 @@ function anpassen(feldElement: HTMLTextAreaElement): void {
     feldElement.style.height = `${feldElement.scrollHeight + 2}px`;
 }
 
+function fristText(): string {
+    return einstellungen.entwurfStunden === 168 ? "wird nach 7 Tagen ohne Änderung gelöscht" : "wird nach 24 Stunden ohne Änderung gelöscht";
+}
+
 let entwurfUhr: ReturnType<typeof setTimeout> | undefined;
 
 function geaendert(): void {
@@ -408,9 +431,10 @@ function geaendert(): void {
     clearTimeout(entwurfUhr);
     entwurfUhr = setTimeout(() => {
         const werte = werteDerMaske();
-        merke(ENTWURF, hatInhalt(werte) ? { werte, zeit: Date.now() } : undefined);
-        el("entwurf-stand").textContent = hatInhalt(werte)
-            ? `Entwurf auf diesem Gerät gespeichert, ${uhrzeit()} Uhr.`
+        const speichern = einstellungen.entwurfStunden > 0 && hatInhalt(werte);
+        merke(ENTWURF, speichern ? { werte, zeit: Date.now() } : undefined);
+        el("entwurf-stand").textContent = speichern
+            ? `Entwurf auf diesem Gerät gespeichert, ${uhrzeit()} Uhr, ${fristText()}.`
             : "";
     }, 400);
     vorschauBald();
@@ -535,7 +559,7 @@ async function kopiereLink(link: Promise<string>): Promise<void> {
     const lang = text.length > LANGER_LINK ? " Achtung: Manche Messenger kürzen so lange Links; dann besser die PDF schicken." : "";
     if (kopiert) {
         el("link-ausgabe").hidden = true;
-        kurzmeldung(`Link kopiert, ${tausender(text.length)} Zeichen. Die Daten stecken im Link, kein Server erhält sie.${lang}`, undefined, lang ? 12_000 : 5_000);
+        kurzmeldung(`Link kopiert, ${tausender(text.length)} Zeichen. Er enthält alle Eingaben; gib ihn nur dorthin weiter, wo der Auftrag hin darf.${lang}`, undefined, lang ? 12_000 : 5_000);
         return;
     }
     const feld = el<HTMLInputElement>("link-feld");
@@ -886,9 +910,17 @@ fuehrungFelder([]);
 zeigeEinstellungen();
 const entwurf = lies<{ werte: Werte; zeit: number }>(ENTWURF);
 if (entwurf?.werte && hatInhalt(entwurf.werte)) {
-    setzeWerte(entwurf.werte);
     const zeit = new Date(entwurf.zeit);
-    el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt.`;
+    const abgelaufen = !(Date.now() - entwurf.zeit < einstellungen.entwurfStunden * 3_600_000);
+    if (abgelaufen) {
+        merke(ENTWURF, undefined);
+        el("entwurf-stand").textContent = einstellungen.entwurfStunden === 0
+            ? "Ein gespeicherter Entwurf wurde gelöscht, weil Entwürfe nicht mehr gespeichert werden."
+            : `Der Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr war älter als ${einstellungen.entwurfStunden === 168 ? "7 Tage" : "24 Stunden"} und wurde gelöscht.`;
+    } else {
+        setzeWerte(entwurf.werte);
+        el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt, ${fristText()}.`;
+    }
 }
 vorschauJetzt();
 zeigeVorschauSchalter();

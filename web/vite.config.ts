@@ -26,6 +26,43 @@ function fassung(): string {
 const FASSUNG = fassung();
 
 /**
+ * Setzt in jede Seite eine Content Security Policy. GitHub Pages lässt keine
+ * eigenen Header zu, deshalb als <meta>. Die kurzen Inline-Skripte und das
+ * Inline-Stylesheet im Kopf werden über ihren Hash freigegeben, nicht über
+ * „unsafe-inline“. Fremd ist nur das Zählskript von gc.zgo.at; es darf
+ * ausschließlich zu einsatzauftrag.goatcounter.com senden.
+ */
+function sicherheit(): Plugin {
+    const hash = (inhalt: string) => `'sha256-${createHash("sha256").update(inhalt).digest("base64")}'`;
+    return {
+        name: "ea-csp",
+        apply: "build",
+        transformIndexHtml: {
+            order: "post",
+            handler(html) {
+                const inline = (muster: RegExp) => [...html.matchAll(muster)].map(treffer => hash(treffer[1] ?? ""));
+                const skripte = inline(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g);
+                const formate = inline(/<style[^>]*>([\s\S]*?)<\/style>/g);
+                const regeln = [
+                    "default-src 'none'",
+                    `script-src 'self' https://gc.zgo.at ${skripte.join(" ")}`.trim(),
+                    `style-src 'self' ${formate.join(" ")}`.trim(),
+                    "img-src 'self' data: blob: https://einsatzauftrag.goatcounter.com",
+                    "font-src 'self' data:",
+                    "connect-src 'self' https://einsatzauftrag.goatcounter.com",
+                    "manifest-src 'self'",
+                    "worker-src 'self'",
+                    "base-uri 'self'",
+                    "form-action 'self'",
+                    "object-src 'none'"
+                ].join("; ");
+                return html.replace(/(<meta charset[^>]*>)/, `$1\n  <meta http-equiv="Content-Security-Policy" content="${regeln}" />`);
+            }
+        }
+    };
+}
+
+/**
  * Legt beim Bauen sw.js an: die Vorlage aus web/offline/ mit der Liste aller
  * erzeugten Dateien und einer Version aus deren Inhalt. Ändert sich eine
  * Datei, ändert sich die Version, und der Browser holt die neue Fassung.
@@ -71,7 +108,7 @@ function offline(): Plugin {
 export default defineConfig({
     root: "web",
     base: "./",
-    plugins: [offline()],
+    plugins: [sicherheit(), offline()],
     // Fassung zum Anzeigen im Fuß, dieselbe steht im Dienst.
     define: { __FASSUNG__: JSON.stringify(FASSUNG) },
     build: {
