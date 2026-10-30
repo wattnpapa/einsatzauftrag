@@ -101,6 +101,7 @@
 
       <!-- ============================ Einzeln ============================ -->
       <section id="ansicht-einzeln" role="tabpanel" aria-labelledby="reiter-einzeln" class="ansicht">
+        <div class="uebungs-band" id="uebungs-band" role="status" hidden><strong>ÜBUNG</strong> – Dieser Auftrag ist als Übung gekennzeichnet und beschreibt keinen echten Einsatz. Jede Seite der PDF trägt das Wasserzeichen „ÜBUNG“.</div>
         <div class="arbeitsflaeche">
           <form id="maske" class="maske" autocomplete="off">
             <div id="maske-felder"></div>
@@ -113,9 +114,12 @@
             <div class="kopfzeile">
               <h3 id="vorschau-titel">Vorschau</h3>
               <span class="nebentext" id="vorschau-stand" role="status"></span>
+              <button type="button" class="vorschau-schalter" id="vorschau-schalter" aria-controls="vorschau-inhalt" aria-expanded="true">Vorschau ausblenden</button>
             </div>
+            <div id="vorschau-inhalt">
             <div class="seiten" id="vorschau-seiten"></div>
             <p class="nebentext nur-dunkel">Die Vorschau ist hier abgedunkelt; die PDF ist ein helles weißes Blatt.</p>
+            </div>
           </section>
 
           <div class="abschluss" id="abschluss">

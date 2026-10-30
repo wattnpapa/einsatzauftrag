@@ -29,6 +29,12 @@ export function zeichneSeite(pdf: jsPDF, seite: Seite): void {
             case "bild":
                 pdf.addImage(element.daten, element.format, element.x, element.y, element.b, element.h);
                 break;
+            case "wasserzeichen":
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(element.groesse);
+                pdf.setTextColor(element.farbe);
+                pdf.text(element.text, element.x, element.y, { angle: element.winkel });
+                break;
         }
     }
     pdf.setFont("helvetica", "normal");

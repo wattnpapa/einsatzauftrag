@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UNTERPUNKTE } from "../../src/index.js";
-import { auftragKopieren, FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, hochzaehlen, KOPIE_LEERT, leseTabelle, NAECHSTER_LEERT, naechsterAuftrag, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
+import { auftragKopieren, FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, hochzaehlen, istJa, KOPIE_LEERT, leseTabelle, NAECHSTER_LEERT, naechsterAuftrag, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
 
 describe("FELDER", () => {
     it("hat jedes Feld genau einmal, alle Unterpunkte eingeschlossen", () => {
@@ -71,26 +71,47 @@ describe("zuDaten", () => {
         expect(daten.empfaenger).toBe("A");
         expect(daten.unterpunkte?.["3b"]).toBe("Sandsäcke");
         expect(daten.unterpunkte?.["1a"]).toBe("");
-        expect(daten.fuehrung).toBe("Funk");
+        expect(daten.fuehrung).toEqual(["Funk"]);
     });
 
     it("erkennt leere Werte", () => {
         expect(hatInhalt({})).toBe(false);
         expect(hatInhalt({ auftrag: "  " })).toBe(false);
         expect(hatInhalt({ "4g": "Handkasse" })).toBe(true);
+        expect(hatInhalt({ uebung: "nein" })).toBe(false);
+        expect(hatInhalt({ uebung: "ja" })).toBe(true);
+    });
+
+    it("liest die Übungskennzeichnung aus Haken und Tabellenspalte", () => {
+        expect(zuDaten({ uebung: "ja" }).uebung).toBe(true);
+        expect(zuDaten({ uebung: "X" }).uebung).toBe(true);
+        expect(zuDaten({ uebung: "nein" }).uebung).toBe(false);
+        expect(zuDaten({}).uebung).toBe(false);
+        expect(istJa(" Ja ")).toBe(true);
+        expect(istJa("vielleicht")).toBe(false);
+        expect(feldZuKopf("Übung")).toBe("uebung");
+        expect(feldZuKopf("Ist Übung")).toBe("uebung");
+        expect(leseTabelle([["Empfänger", "Übung"], ["Gruppe A", "x"]]).zeilen[0]?.werte.uebung).toBe("x");
     });
 });
 
 describe("Abschnitt 5 als Zeilen", () => {
-    it("teilt an Leerzeilen und fügt wieder zusammen", () => {
+    it("teilt Text aus einer Tabelle an Leerzeilen", () => {
         expect(fuehrungZeilen("A\nB\n\n\nC\n \n")).toEqual(["A\nB", "C"]);
+        expect(fuehrungZeilen("A\\n\\nB")).toEqual(["A", "B"]);
         expect(fuehrungZeilen("")).toEqual([]);
-        expect(fuehrungText(["A\nB", "", "C"])).toBe("A\nB\n\nC");
     });
 
     it("hält eine Eingabe mit Leerzeilen als eine Zeile", () => {
-        const text = fuehrungText(["Erreichbarkeiten:\n\nFüSt Rostock\n", "Führungsstelle"]);
-        expect(fuehrungZeilen(text)).toEqual(["Erreichbarkeiten:\nFüSt Rostock", "Führungsstelle"]);
+        const text = fuehrungText(["\nErreichbarkeiten:\n\nFüSt Rostock\n", "", "Führungsstelle"]);
+        expect(fuehrungZeilen(text)).toEqual(["Erreichbarkeiten:\n\nFüSt Rostock", "Führungsstelle"]);
+        expect(fuehrungZeilen(fuehrungText(["Nur eine\n\nZeile"]))).toEqual(["Nur eine\n\nZeile"]);
+        expect(fuehrungText(["", " "])).toBe("");
+    });
+
+    it("gibt der Bibliothek die Zeilen als Liste", () => {
+        expect(zuDaten({ fuehrung: fuehrungText(["A\n\nB", "C"]) }).fuehrung).toEqual(["A\n\nB", "C"]);
+        expect(zuDaten({ fuehrung: "A\n\nB" }).fuehrung).toEqual(["A", "B"]);
     });
 });
 

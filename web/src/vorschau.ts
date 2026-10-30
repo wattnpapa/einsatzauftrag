@@ -64,6 +64,23 @@ export function seiteAlsSvg(seite: Seite, beschriftung: string): SVGSVGElement {
                     x: teil.x, y: teil.y, width: teil.b, height: teil.h, href: bildQuelle(teil.daten, teil.format), preserveAspectRatio: "none"
                 }));
                 break;
+            case "wasserzeichen": {
+                // SVG dreht im Uhrzeigersinn, die PDF dagegen: Vorzeichen umkehren.
+                const text = element("text", {
+                    x: teil.x,
+                    y: teil.y,
+                    "font-size": teil.groesse * PT,
+                    "font-family": "Helvetica, Arial, 'Liberation Sans', sans-serif",
+                    "font-weight": 700,
+                    fill: teil.farbe,
+                    transform: `rotate(${-teil.winkel} ${teil.x} ${teil.y})`,
+                    textLength: teil.breite,
+                    lengthAdjust: "spacingAndGlyphs"
+                });
+                text.textContent = teil.text;
+                svg.appendChild(text);
+                break;
+            }
         }
     }
     return svg;

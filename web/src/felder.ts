@@ -7,7 +7,8 @@ export type Feldschluessel =
     | "absender" | "einsatz" | "laufendeNummer" | "empfaenger"
     | Unterpunkt | "auftrag" | "fuehrung"
     | "ortDatum" | "unterschrift" | "dienststelle"
-    | "abgesandtAm" | "abgesandtUm" | "abgesandtVon";
+    | "abgesandtAm" | "abgesandtUm" | "abgesandtVon"
+    | "uebung";
 
 export interface Feld {
     readonly schluessel: Feldschluessel;
@@ -56,6 +57,14 @@ function unterpunktFeld(kennung: Unterpunkt): Feld {
 export const FELDER: readonly Feld[] = [
     { schluessel: "absender", titel: "Absender", beschreibung: "Wer den Auftrag erteilt.", beispiel: "ZTr TZ OV Oldenburg", breite: 22 },
     { schluessel: "einsatz", titel: "Für den Einsatz", beschreibung: "Bezeichnung des Einsatzes.", beispiel: "Hochwasser Hunte 2026", auch: ["Einsatz"], breite: 22 },
+    {
+        schluessel: "uebung",
+        titel: "Übung",
+        beschreibung: "„ja“ oder „x“, wenn der Auftrag zu einer Übung gehört: Jede Seite trägt dann quer das Wasserzeichen „ÜBUNG“, die Fußzeile nennt es. Leer oder „nein“ bei einem echten Einsatz.",
+        beispiel: "ja",
+        auch: ["Ist Übung", "Übungsauftrag"],
+        breite: 8
+    },
     { schluessel: "laufendeNummer", titel: "Lfd. Nr.", beschreibung: "Laufende Nummer des Auftrags.", beispiel: "12", auch: ["Laufende Nummer", "Nr", "Nummer"], breite: 9 },
     { schluessel: "empfaenger", titel: "Empfänger", beschreibung: "Wer den Auftrag erhält.", beispiel: "B-Gruppe 1. TZ", breite: 22 },
     ...UNTERPUNKTE.filter(punkt => punkt.startsWith("1")).map(unterpunktFeld),
@@ -88,6 +97,11 @@ export const FELDER: readonly Feld[] = [
 
 export type Werte = Partial<Record<Feldschluessel, string>>;
 
+/** Ob ein Tabellenwert „ja“ meint: ja, j, x, wahr, true, 1, yes; alles andere nicht. */
+export function istJa(wert: string | undefined): boolean {
+    return ["ja", "j", "x", "wahr", "true", "1", "yes"].includes((wert ?? "").trim().toLowerCase());
+}
+
 /** Werte der Maske oder einer Tabellenzeile in die Daten der Bibliothek. */
 export function zuDaten(werte: Werte): EinsatzauftragDaten {
     const wert = (schluessel: Feldschluessel) => werte[schluessel] ?? "";
@@ -98,28 +112,39 @@ export function zuDaten(werte: Werte): EinsatzauftragDaten {
         empfaenger: wert("empfaenger"),
         unterpunkte: Object.fromEntries(UNTERPUNKTE.map(punkt => [punkt, wert(punkt)])),
         auftrag: wert("auftrag"),
-        fuehrung: wert("fuehrung"),
+        fuehrung: fuehrungZeilen(wert("fuehrung")),
         ortDatum: wert("ortDatum"),
         unterschrift: wert("unterschrift"),
         dienststelle: wert("dienststelle"),
         abgesandtAm: wert("abgesandtAm"),
         abgesandtUm: wert("abgesandtUm"),
-        abgesandtVon: wert("abgesandtVon")
+        abgesandtVon: wert("abgesandtVon"),
+        uebung: istJa(werte.uebung)
     };
 }
 
 /**
- * Abschnitt 5 als einzelne Formularzeilen: Im gespeicherten Text trennt eine
- * Leerzeile die Zeilen, so wie die Bibliothek ihn setzt.
+ * Ende einer Zeile von Abschnitt 5 im Text der Maske (ASCII „Record
+ * Separator“). In ein Textfeld tippt ihn niemand, so bleiben Leerzeilen
+ * innerhalb einer Zeile stehen.
+ */
+const ZEILENENDE = "\u001E";
+
+/**
+ * Abschnitt 5 als einzelne Formularzeilen. Text aus der Maske trägt nach jeder
+ * Zeile ein `ZEILENENDE`; Text aus einer Tabelle (oder ein älterer Entwurf) hat
+ * keines, dort trennt eine Leerzeile die Zeilen wie in der Bibliothek.
  */
 export function fuehrungZeilen(text: string): string[] {
-    return text.replace(/\r\n?/g, "\n").split(/\n[ \t]*\n/).map(zeile => zeile.replace(/^\s*\n|\n\s*$/g, "").trimEnd()).filter(zeile => zeile.trim() !== "");
+    const normal = text.replace(/\r\n?/g, "\n");
+    const roh = normal.includes(ZEILENENDE) ? normal.split(ZEILENENDE) : normal.replace(/\\n/g, "\n").split(/\n[ \t]*\n/);
+    return roh.map(zeile => zeile.replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "").trimEnd()).filter(zeile => zeile.trim() !== "");
 }
 
-/** Umkehrung von `fuehrungZeilen`. Leerzeilen innerhalb einer Zeile fallen weg, damit sie eine Zeile bleibt. */
+/** Umkehrung von `fuehrungZeilen`. Leerzeilen innerhalb einer Zeile bleiben stehen. */
 export function fuehrungText(zeilen: readonly string[]): string {
-    return zeilen.map(zeile => zeile.replace(/\r\n?/g, "\n").replace(/\n[ \t]*(?=\n)/g, "").replace(/^\n+|\n+$/g, "").trimEnd())
-        .filter(zeile => zeile.trim() !== "").join("\n\n");
+    return zeilen.map(zeile => zeile.replace(/\r\n?/g, "\n").replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "").trimEnd())
+        .filter(zeile => zeile.trim() !== "").map(zeile => `${zeile}${ZEILENENDE}`).join("");
 }
 
 /** Zählt die letzte Zahl in der lfd. Nr. hoch, mit führenden Nullen: „A-09“ wird „A-10“. */
@@ -160,9 +185,9 @@ export function auftragKopieren(werte: Werte): Werte {
     return folgeauftrag(werte, KOPIE_LEERT);
 }
 
-/** Ob irgendein Feld etwas enthält. */
+/** Ob irgendein Feld etwas enthält. Ein „nein“ bei Übung zählt nicht. */
 export function hatInhalt(werte: Werte): boolean {
-    return FELDER.some(feld => (werte[feld.schluessel] ?? "").trim() !== "");
+    return FELDER.some(feld => feld.schluessel === "uebung" ? istJa(werte.uebung) : (werte[feld.schluessel] ?? "").trim() !== "");
 }
 
 function normal(text: string): string {

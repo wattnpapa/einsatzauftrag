@@ -4,7 +4,7 @@ import "./seite.js";
 import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
 import { datenAusFragment, dekodiereWerte, istPdf, kodiereWerte, LANGER_LINK, leseAusPdf, linkMitDaten, tausender } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
-import { auftragKopieren, FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, naechsterAuftrag, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { auftragKopieren, FELDER, fuehrungText, fuehrungZeilen, hatInhalt, istJa, leseTabelle, naechsterAuftrag, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -273,6 +273,19 @@ function baueMaske(): void {
     reihe = zeile(kopf);
     eingabe(reihe, "einsatz", "Für den Einsatz", "input", "", "z. B. Hochwasser Hunte 2026");
     eingabe(reihe, "empfaenger", "Empfänger", "input", "", "z. B. B-Gruppe 1. TZ");
+    // Übungskennzeichen wie im Erfassungsbogen: ein Haken, der bis ins PDF sichtbar bleibt.
+    const uebung = document.createElement("label");
+    uebung.className = "inline uebung-wahl";
+    const haken = document.createElement("input");
+    haken.type = "checkbox";
+    haken.name = "uebung";
+    haken.value = "ja";
+    uebung.append(haken, " Dies ist eine Übung");
+    kopf.appendChild(uebung);
+    const uebungHinweis = document.createElement("p");
+    uebungHinweis.className = "hinweis";
+    uebungHinweis.textContent = "Jede Seite trägt dann quer das Wasserzeichen „ÜBUNG“, in Vorschau und PDF. „Nächster Auftrag“ behält den Haken.";
+    kopf.appendChild(uebungHinweis);
 
     for (const abschnitt of ABSCHNITTE) {
         const behaelter = karte(`${abschnitt.nummer}. ${abschnitt.titel}`, abschnitt.unterpunkte.length > 0 ? undefined : abschnitt.erlaeuterung);
@@ -348,10 +361,18 @@ function steuerelemente(): (HTMLInputElement | HTMLTextAreaElement)[] {
     return FELDER.map(eintrag => maske.elements.namedItem(eintrag.schluessel) as HTMLInputElement | HTMLTextAreaElement);
 }
 
+function istHaken(steuer: HTMLInputElement | HTMLTextAreaElement): steuer is HTMLInputElement {
+    return steuer instanceof HTMLInputElement && steuer.type === "checkbox";
+}
+
 function werteDerMaske(): Werte {
     const werte: Werte = {};
     for (const steuer of steuerelemente()) {
-        if (steuer.value) {
+        if (istHaken(steuer)) {
+            if (steuer.checked) {
+                werte[steuer.name as Feldschluessel] = steuer.value;
+            }
+        } else if (steuer.value) {
             werte[steuer.name as Feldschluessel] = steuer.value;
         }
     }
@@ -360,6 +381,10 @@ function werteDerMaske(): Werte {
 
 function setzeWerte(werte: Werte): void {
     for (const steuer of steuerelemente()) {
+        if (istHaken(steuer)) {
+            steuer.checked = istJa(werte[steuer.name as Feldschluessel]);
+            continue;
+        }
         steuer.value = werte[steuer.name as Feldschluessel] ?? "";
         if (steuer instanceof HTMLTextAreaElement) {
             anpassen(steuer);
@@ -407,6 +432,9 @@ maske.addEventListener("submit", ereignis => ereignis.preventDefault());
 /** Nur zum Messen der Textbreiten; gezeichnet wird in eine eigene PDF. */
 const messPdf = new jsPDF({ unit: "mm", format: "a4" });
 let vorschauUhr: ReturnType<typeof setTimeout> | undefined;
+const VORSCHAU = "ea.vorschau.v1";
+/** Ausgeblendet wird nur das Bild; Seitenzahl und Seitenhinweis rechnet der Satz weiter. */
+let vorschauSichtbar = lies<boolean>(VORSCHAU) !== false;
 
 function vorschauBald(): void {
     clearTimeout(vorschauUhr);
@@ -414,8 +442,12 @@ function vorschauBald(): void {
 }
 
 function vorschauJetzt(): void {
-    const satz = setzeEinsatzauftrag(messPdf, zuDaten(werteDerMaske()), { fusszeile: HERKUNFT, ...optionen() });
-    zeigeSeiten(el("vorschau-seiten"), satz.seiten);
+    const werte = werteDerMaske();
+    el("uebungs-band").hidden = !istJa(werte.uebung);
+    const satz = setzeEinsatzauftrag(messPdf, zuDaten(werte), { fusszeile: HERKUNFT, ...optionen() });
+    if (vorschauSichtbar) {
+        zeigeSeiten(el("vorschau-seiten"), satz.seiten);
+    }
     const seiten = satz.seiten.length;
     el("vorschau-stand").textContent = `${seiten === 1 ? "1 Seite" : `${seiten} Seiten`}, Schrift ${String(satz.schriftgroesse).replace(".", ",")} pt`;
     const hinweis = el("seiten-hinweis");
@@ -585,7 +617,32 @@ maske.addEventListener("click", ereignis => {
 });
 
 el("zur-vorschau").addEventListener("click", () => {
-    el("vorschau").scrollIntoView({ behavior: "smooth", block: "start" });
+    el(vorschauSichtbar ? "vorschau" : "abschluss").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+/** Ohne Vorschau nimmt die Maske die ganze Breite; die Textfelder werden dabei niedriger. */
+function zeigeVorschauSchalter(): void {
+    el("ansicht-einzeln").querySelector(".arbeitsflaeche")?.classList.toggle("ohne-vorschau", !vorschauSichtbar);
+    el("vorschau-inhalt").hidden = !vorschauSichtbar;
+    const schalter = el("vorschau-schalter");
+    schalter.textContent = vorschauSichtbar ? "Vorschau ausblenden" : "Vorschau einblenden";
+    schalter.setAttribute("aria-expanded", String(vorschauSichtbar));
+    for (const steuer of steuerelemente()) {
+        if (steuer instanceof HTMLTextAreaElement) {
+            anpassen(steuer);
+        }
+    }
+}
+
+el("vorschau-schalter").addEventListener("click", () => {
+    vorschauSichtbar = !vorschauSichtbar;
+    merke(VORSCHAU, vorschauSichtbar ? undefined : false);
+    zeigeVorschauSchalter();
+    if (vorschauSichtbar) {
+        vorschauJetzt();
+    } else {
+        el("vorschau-seiten").replaceChildren();
+    }
 });
 
 // ---- Reiter -----------------------------------------------------------------------
@@ -706,7 +763,11 @@ function zeigeTabelle(): void {
     const seiten = tabelle.zeilen.map(zeile => setzeEinsatzauftrag(messPdf, zuDaten(zeile.werte), satzOptionen).seiten.length);
     const summe = seiten.reduce((a, b) => a + b, 0);
     const anzahl = tabelle.zeilen.length;
-    el("ergebnis-zusammenfassung").textContent = `${tabelle.name}: ${anzahl === 1 ? "1 Einsatzauftrag" : `${anzahl} Einsatzaufträge`} auf ${summe === 1 ? "1 Seite" : `${summe} Seiten`}. Jeder Auftrag beginnt auf einer neuen Seite.`;
+    const uebungen = tabelle.zeilen.filter(zeile => istJa(zeile.werte.uebung)).length;
+    const uebungsText = uebungen === 0 ? "" : uebungen === anzahl
+        ? ` ${anzahl === 1 ? "Er ist" : "Alle sind"} als Übung gekennzeichnet und ${anzahl === 1 ? "trägt" : "tragen"} das Wasserzeichen „ÜBUNG“.`
+        : ` ${uebungen === 1 ? "Einer davon ist" : `${uebungen} davon sind`} als Übung gekennzeichnet (Spalte „Übung“) und ${uebungen === 1 ? "trägt" : "tragen"} das Wasserzeichen „ÜBUNG“.`;
+    el("ergebnis-zusammenfassung").textContent = `${tabelle.name}: ${anzahl === 1 ? "1 Einsatzauftrag" : `${anzahl} Einsatzaufträge`} auf ${summe === 1 ? "1 Seite" : `${summe} Seiten`}. Jeder Auftrag beginnt auf einer neuen Seite.${uebungsText}`;
     const mehrseitig = seiten.filter(zahl => zahl > 1).length;
     const warnungen = [...tabelle.hinweise];
     if (mehrseitig > 0) {
@@ -729,6 +790,10 @@ function zeigeTabelle(): void {
         };
         zelle(String(zeile.zeile));
         zelle(zeile.werte.laufendeNummer ?? "–", zeile.werte.laufendeNummer ? "" : "ohne");
+        if (istJa(zeile.werte.uebung)) {
+            tr.className = "uebung";
+            tr.title = "Als Übung gekennzeichnet";
+        }
         zelle(zeile.werte.empfaenger ?? "–", zeile.werte.empfaenger ? "" : "ohne");
         const auftrag = (zeile.werte.auftrag ?? "").replace(/\s+/g, " ");
         zelle(auftrag ? (auftrag.length > 80 ? `${auftrag.slice(0, 79)}…` : auftrag) : "–", auftrag ? "" : "ohne");
@@ -826,13 +891,9 @@ if (entwurf?.werte && hatInhalt(entwurf.werte)) {
     el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt.`;
 }
 vorschauJetzt();
+zeigeVorschauSchalter();
 void auftragAusLink();
 addEventListener("hashchange", () => void auftragAusLink());
-for (const steuer of steuerelemente()) {
-    if (steuer instanceof HTMLTextAreaElement) {
-        anpassen(steuer);
-    }
-}
 el("fassung").textContent = `Fassung ${__FASSUNG__}.`;
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {

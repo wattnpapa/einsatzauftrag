@@ -22,16 +22,24 @@ export interface EinsatzauftragDaten {
     /** Abschnitt 2, erhaltener Auftrag. */
     auftrag?: string;
     /**
-     * Abschnitt 5. Zeilenumbrüche bleiben in der Zelle erhalten; eine Leerzeile
-     * beginnt eine neue Formularzeile. Mindestens zwei Zeilen wie im Vordruck.
+     * Abschnitt 5. Zeilenumbrüche bleiben in der Zelle erhalten. Als Text
+     * beginnt eine Leerzeile eine neue Formularzeile; als Liste ist jeder
+     * Eintrag eine Formularzeile, Leerzeilen darin bleiben stehen.
+     * Mindestens zwei Zeilen wie im Vordruck.
      */
-    fuehrung?: string;
+    fuehrung?: string | readonly string[];
     ortDatum?: string;
     unterschrift?: string;
     dienststelle?: string;
     abgesandtAm?: string;
     abgesandtUm?: string;
     abgesandtVon?: string;
+    /**
+     * Der Auftrag gehört zu einer Übung. Jede Seite trägt dann quer das
+     * Wasserzeichen „ÜBUNG“ und die Fußzeile nennt es, damit der Ausdruck nie
+     * für einen echten Auftrag gehalten wird.
+     */
+    uebung?: boolean;
 }
 
 /** Ein Abschnitt des Vordrucks mit gelber Kopfzeile. */
