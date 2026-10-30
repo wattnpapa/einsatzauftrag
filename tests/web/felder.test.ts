@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UNTERPUNKTE } from "../../src/index.js";
-import { FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
+import { auftragKopieren, FELDER, feldZuKopf, fuehrungText, fuehrungZeilen, hatInhalt, hochzaehlen, KOPIE_LEERT, leseTabelle, NAECHSTER_LEERT, naechsterAuftrag, vorlageTabelle, zuDaten } from "../../web/src/felder.js";
 
 describe("FELDER", () => {
     it("hat jedes Feld genau einmal, alle Unterpunkte eingeschlossen", () => {
@@ -91,5 +91,42 @@ describe("Abschnitt 5 als Zeilen", () => {
     it("hält eine Eingabe mit Leerzeilen als eine Zeile", () => {
         const text = fuehrungText(["Erreichbarkeiten:\n\nFüSt Rostock\n", "Führungsstelle"]);
         expect(fuehrungZeilen(text)).toEqual(["Erreichbarkeiten:\nFüSt Rostock", "Führungsstelle"]);
+    });
+});
+
+describe("Folgeaufträge", () => {
+    const werte = {
+        absender: "ZTr TZ", einsatz: "Hochwasser", laufendeNummer: "A-09", empfaenger: "B-Gruppe",
+        "1a": "Lage", auftrag: "Deich sichern", "3a": "km 4,2", "4a": "Log-V", fuehrung: "TMO",
+        ortDatum: "Oldenburg, 27.10.2026", abgesandtAm: "27.10.", abgesandtUm: "13:45", abgesandtVon: "Fm Muster"
+    } as const;
+
+    it("zählt die letzte Zahl der lfd. Nr. hoch und behält Nullen und Zusätze", () => {
+        expect(hochzaehlen("12")).toBe("13");
+        expect(hochzaehlen("A-09")).toBe("A-10");
+        expect(hochzaehlen("007/b")).toBe("008/b");
+        expect(hochzaehlen("ohne")).toBe("ohne");
+    });
+
+    it("„Auftrag kopieren“ behält alles bis auf Empfänger und Absendung", () => {
+        const kopie = auftragKopieren(werte);
+        expect(kopie).toEqual({ ...werte, laufendeNummer: "A-10", empfaenger: undefined, abgesandtAm: undefined, abgesandtUm: undefined });
+        expect(Object.keys(kopie)).not.toContain("empfaenger");
+        for (const schluessel of KOPIE_LEERT) {
+            expect(kopie[schluessel]).toBeUndefined();
+        }
+        expect(werte.empfaenger).toBe("B-Gruppe");
+    });
+
+    it("„Nächster Auftrag“ leert zusätzlich Auftrag und Durchführung", () => {
+        const neu = naechsterAuftrag(werte);
+        for (const schluessel of NAECHSTER_LEERT) {
+            expect(neu[schluessel]).toBeUndefined();
+        }
+        expect(neu).toMatchObject({ laufendeNummer: "A-10", "1a": "Lage", "4a": "Log-V", fuehrung: "TMO", abgesandtVon: "Fm Muster" });
+    });
+
+    it("lässt eine fehlende lfd. Nr. fehlen", () => {
+        expect(auftragKopieren({ empfaenger: "A", auftrag: "B" })).toEqual({ auftrag: "B" });
     });
 });

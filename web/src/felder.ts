@@ -122,6 +122,44 @@ export function fuehrungText(zeilen: readonly string[]): string {
         .filter(zeile => zeile.trim() !== "").join("\n\n");
 }
 
+/** Zählt die letzte Zahl in der lfd. Nr. hoch, mit führenden Nullen: „A-09“ wird „A-10“. */
+export function hochzaehlen(nummer: string): string {
+    const treffer = /^(.*?)(\d+)(\D*)$/.exec(nummer.trim());
+    if (!treffer) {
+        return nummer;
+    }
+    const [, vorne = "", zahl = "", hinten = ""] = treffer;
+    return `${vorne}${String(Number(zahl) + 1).padStart(zahl.length, "0")}${hinten}`;
+}
+
+/** Was „Nächster Auftrag“ leert. */
+export const NAECHSTER_LEERT: readonly Feldschluessel[] = ["empfaenger", "auftrag", "3a", "3b", "3c", "abgesandtAm", "abgesandtUm"];
+
+/** Was „Auftrag kopieren“ leert: derselbe Auftrag an einen weiteren Empfänger. */
+export const KOPIE_LEERT: readonly Feldschluessel[] = ["empfaenger", "abgesandtAm", "abgesandtUm"];
+
+/** Neue Werte aus den bisherigen: `leert` fällt weg, die lfd. Nr. zählt hoch. */
+function folgeauftrag(werte: Werte, leert: readonly Feldschluessel[]): Werte {
+    const neu: Werte = { ...werte };
+    for (const schluessel of leert) {
+        delete neu[schluessel];
+    }
+    if (werte.laufendeNummer) {
+        neu.laufendeNummer = hochzaehlen(werte.laufendeNummer);
+    }
+    return neu;
+}
+
+/** „Nächster Auftrag“: Rahmen bleibt, Empfänger, Auftrag, Durchführung und „Abgesandt“ leer. */
+export function naechsterAuftrag(werte: Werte): Werte {
+    return folgeauftrag(werte, NAECHSTER_LEERT);
+}
+
+/** „Auftrag kopieren“: alles bleibt, nur Empfänger und „Abgesandt“ leer. */
+export function auftragKopieren(werte: Werte): Werte {
+    return folgeauftrag(werte, KOPIE_LEERT);
+}
+
 /** Ob irgendein Feld etwas enthält. */
 export function hatInhalt(werte: Werte): boolean {
     return FELDER.some(feld => (werte[feld.schluessel] ?? "").trim() !== "");

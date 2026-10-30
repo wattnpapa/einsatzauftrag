@@ -4,7 +4,7 @@ import "./seite.js";
 import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
 import { datenAusFragment, dekodiereWerte, istPdf, kodiereWerte, LANGER_LINK, leseAusPdf, linkMitDaten, tausender } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
-import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { auftragKopieren, FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, naechsterAuftrag, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -542,31 +542,17 @@ async function auftragAusLink(): Promise<void> {
     }
 }
 
-/** Was „Nächster Auftrag“ leert. */
-const NAECHSTER_LEERT: readonly Feldschluessel[] = ["empfaenger", "auftrag", "3a", "3b", "3c", "abgesandtAm", "abgesandtUm"];
-
-function hochzaehlen(nummer: string): string {
-    const treffer = /^(.*?)(\d+)(\D*)$/.exec(nummer.trim());
-    if (!treffer) {
-        return nummer;
-    }
-    const [, vorne = "", zahl = "", hinten = ""] = treffer;
-    return `${vorne}${String(Number(zahl) + 1).padStart(zahl.length, "0")}${hinten}`;
-}
-
-el("einzeln-naechster").addEventListener("click", () => {
+/** „Nächster Auftrag“ und „Auftrag kopieren“: neue Werte setzen, Fokus auf Empfänger. */
+function folgeauftrag(neuAus: (werte: Werte) => Werte, meldung: string, zusatz = ""): void {
     const vorher = werteDerMaske();
-    const neu: Werte = { ...vorher };
-    for (const schluessel of NAECHSTER_LEERT) {
-        delete neu[schluessel];
-    }
-    if (vorher.laufendeNummer) {
-        neu.laufendeNummer = hochzaehlen(vorher.laufendeNummer);
-    }
+    const neu = neuAus(vorher);
     setzeWerte(neu);
     (maske.elements.namedItem("empfaenger") as HTMLInputElement).focus();
-    kurzmeldung(`Nächster Auftrag${neu.laufendeNummer ? `, lfd. Nr. ${neu.laufendeNummer}` : ""}.`, () => setzeWerte(vorher));
-});
+    kurzmeldung(`${meldung}${neu.laufendeNummer ? `, lfd. Nr. ${neu.laufendeNummer}` : ""}.${zusatz}`, () => setzeWerte(vorher));
+}
+
+el("einzeln-naechster").addEventListener("click", () => folgeauftrag(naechsterAuftrag, "Nächster Auftrag"));
+el("einzeln-kopieren").addEventListener("click", () => folgeauftrag(auftragKopieren, "Auftrag kopiert", " Jetzt den Empfänger eintragen."));
 
 el("einzeln-leeren").addEventListener("click", () => {
     const vorher = werteDerMaske();
