@@ -72,6 +72,11 @@ npm run build        # dist/
 npm run beispiel     # Beispiel-PDFs nach ausgabe/
 ```
 
+## Dokumentation
+
+- [Architektur nach arc42](docs/arc42.md)
+- [Datenschutz-Folgenabschätzung](docs/dsfa.md), Entwurf; offene Punkte stehen in Abschnitt 9
+
 ## Lizenz
 
 EUPL-1.2, siehe [LICENSE](LICENSE).
