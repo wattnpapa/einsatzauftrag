@@ -145,3 +145,24 @@ export async function leseAusPdf(bytes: ArrayBuffer | Uint8Array): Promise<Werte
     }
     return dekodiereWerte(daten);
 }
+
+// ---- Link --------------------------------------------------------------------
+
+/** Ab dieser Länge kürzen manche Messenger einen Link. */
+export const LANGER_LINK = 8000;
+
+/** Link auf die App mit den kodierten Daten im Fragment; das Fragment erreicht keinen Server. */
+export function linkMitDaten(basis: string, kodiert: string): string {
+    return `${basis}#a=${kodiert}`;
+}
+
+/** Die kodierten Daten aus einem Fragment wie `#a=…`, sonst `undefined`. */
+export function datenAusFragment(fragment: string): string | undefined {
+    const treffer = /^#?a=(.*)$/s.exec(fragment);
+    return treffer ? treffer[1] ?? "" : undefined;
+}
+
+/** Zahl mit geschütztem Leerzeichen als Tausendertrenner, z. B. „1 234“. */
+export function tausender(zahl: number): string {
+    return String(zahl).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}

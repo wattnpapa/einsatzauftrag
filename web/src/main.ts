@@ -2,7 +2,7 @@
 import { jsPDF } from "jspdf";
 import "./seite.js";
 import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
-import { istPdf, leseAusPdf } from "./austausch.js";
+import { datenAusFragment, dekodiereWerte, istPdf, kodiereWerte, LANGER_LINK, leseAusPdf, linkMitDaten, tausender } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
 import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
@@ -88,7 +88,7 @@ function uhrzeit(): string {
 let kurzUhr: ReturnType<typeof setTimeout> | undefined;
 let kurzRueckgaengig: (() => void) | undefined;
 
-function kurzmeldung(text: string, rueckgaengig?: () => void): void {
+function kurzmeldung(text: string, rueckgaengig?: () => void, dauer = rueckgaengig ? 12_000 : 5_000): void {
     const kasten = el("kurzmeldung");
     el("kurzmeldung-text").textContent = text;
     kurzRueckgaengig = rueckgaengig;
@@ -98,7 +98,7 @@ function kurzmeldung(text: string, rueckgaengig?: () => void): void {
     kurzUhr = setTimeout(() => {
         kasten.hidden = true;
         kurzRueckgaengig = undefined;
-    }, rueckgaengig ? 12_000 : 5_000);
+    }, dauer);
 }
 
 el("kurzmeldung-rueckgaengig").addEventListener("click", ereignis => {
@@ -378,6 +378,8 @@ function anpassen(feldElement: HTMLTextAreaElement): void {
 let entwurfUhr: ReturnType<typeof setTimeout> | undefined;
 
 function geaendert(): void {
+    // Ein angezeigter Link gilt nur für den Stand, aus dem er entstand.
+    el("link-ausgabe").hidden = true;
     clearTimeout(entwurfUhr);
     entwurfUhr = setTimeout(() => {
         const werte = werteDerMaske();
@@ -469,6 +471,76 @@ el("einzeln-drucken").addEventListener("click", async () => {
         kurzmeldung(`Die PDF ließ sich nicht erzeugen: ${fehlertext(fehler)}`);
     }
 });
+
+// ---- Als Link teilen ------------------------------------------------------------
+
+/**
+ * Schreibt den Link in die Zwischenablage. Geht das nicht (kein sicherer
+ * Kontext, verweigert), steht er markiert in einem Textfeld.
+ */
+async function kopiereLink(link: Promise<string>): Promise<void> {
+    let kopiert = false;
+    try {
+        // Mit ClipboardItem beginnt das Schreiben noch im Klick, während der
+        // Link entsteht; Safari erlaubt die Zwischenablage nur so.
+        await navigator.clipboard.write([new ClipboardItem({ "text/plain": link.then(text => new Blob([text], { type: "text/plain" })) })]);
+        kopiert = true;
+    } catch {
+        try {
+            await navigator.clipboard.writeText(await link);
+            kopiert = true;
+        } catch {
+            kopiert = false;
+        }
+    }
+    let text: string;
+    try {
+        text = await link;
+    } catch (fehler) {
+        kurzmeldung(`Der Link ließ sich nicht erzeugen: ${fehlertext(fehler)}`);
+        return;
+    }
+    const lang = text.length > LANGER_LINK ? " Achtung: Manche Messenger kürzen so lange Links; dann besser die PDF schicken." : "";
+    if (kopiert) {
+        el("link-ausgabe").hidden = true;
+        kurzmeldung(`Link kopiert, ${tausender(text.length)} Zeichen. Die Daten stecken im Link, kein Server erhält sie.${lang}`, undefined, lang ? 12_000 : 5_000);
+        return;
+    }
+    const feld = el<HTMLInputElement>("link-feld");
+    feld.value = text;
+    el("link-ausgabe").hidden = false;
+    feld.focus();
+    feld.select();
+    kurzmeldung(`Der Browser lässt nicht in die Zwischenablage schreiben. Der Link (${tausender(text.length)} Zeichen) steht markiert unter den Knöpfen zum Kopieren.${lang}`, undefined, 12_000);
+}
+
+el("einzeln-link").addEventListener("click", () => {
+    const werte = werteDerMaske();
+    if (!hatInhalt(werte)) {
+        kurzmeldung("Die Maske ist leer, es gibt noch nichts zu teilen.");
+        return;
+    }
+    void kopiereLink(kodiereWerte(werte).then(kodiert => linkMitDaten(location.origin + location.pathname, kodiert)));
+});
+
+el<HTMLInputElement>("link-feld").addEventListener("focus", ereignis => (ereignis.target as HTMLInputElement).select());
+
+/**
+ * Steht `#a=…` in der Adresse, kommt der Auftrag in die Maske. Das Fragment
+ * fällt danach aus der Adresse, damit ein Neuladen ihn nicht noch einmal setzt.
+ */
+async function auftragAusLink(): Promise<void> {
+    const kodiert = datenAusFragment(location.hash);
+    if (kodiert === undefined) {
+        return;
+    }
+    history.replaceState(history.state, "", location.pathname + location.search);
+    try {
+        uebernimmAuftraege(await dekodiereWerte(kodiert), "Link", "Auftrag aus Link übernommen.");
+    } catch (fehler) {
+        kurzmeldung(`Der Link ließ sich nicht übernehmen. ${fehlertext(fehler)} Vielleicht wurde er beim Weitergeben gekürzt. Der Entwurf bleibt unverändert.`, undefined, 12_000);
+    }
+}
 
 /** Was „Nächster Auftrag“ leert. */
 const NAECHSTER_LEERT: readonly Feldschluessel[] = ["empfaenger", "auftrag", "3a", "3b", "3c", "abgesandtAm", "abgesandtUm"];
@@ -589,7 +661,7 @@ function uebernimmAuftraege(auftraege: readonly Werte[], quelle: string, meldung
     tabelle = {
         name: quelle,
         zeilen: auftraege.map((werte, index) => ({ zeile: index + 1, werte })),
-        hinweise: [`Wieder eingelesen aus einer PDF dieser App. „Zeile“ ist hier die Reihenfolge der Aufträge in der PDF.`]
+        hinweise: ["Mit dieser App erzeugte Aufträge, wieder eingelesen. „Zeile“ ist hier ihre Reihenfolge."]
     };
     el("tabelle-fehler").hidden = true;
     zeigeTabelle();
@@ -768,6 +840,8 @@ if (entwurf?.werte && hatInhalt(entwurf.werte)) {
     el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt.`;
 }
 vorschauJetzt();
+void auftragAusLink();
+addEventListener("hashchange", () => void auftragAusLink());
 for (const steuer of steuerelemente()) {
     if (steuer instanceof HTMLTextAreaElement) {
         anpassen(steuer);

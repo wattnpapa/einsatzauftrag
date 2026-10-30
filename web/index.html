@@ -122,10 +122,17 @@
             <div class="warnung" id="seiten-hinweis" hidden></div>
             <div class="aktionen">
               <button type="button" class="primaer" id="einzeln-pdf">PDF herunterladen</button>
+              <button type="button" id="einzeln-link" aria-label="Link mit allen Eingaben in die Zwischenablage kopieren">Link teilen</button>
               <button type="button" id="einzeln-drucken">Drucken</button>
               <button type="button" id="einzeln-naechster">Nächster Auftrag</button>
               <button type="button" class="abgesetzt" id="einzeln-leeren">Felder leeren</button>
             </div>
+            <div class="link-ausgabe" id="link-ausgabe" hidden>
+              <label class="feld">Link zum Auftrag, markiert zum Kopieren
+                <input id="link-feld" readonly spellcheck="false" />
+              </label>
+            </div>
+            <p class="hinweis">„Link teilen“ legt alle Eingaben in einen Link; wer ihn öffnet, hat den Auftrag in der Maske. Die Daten stecken im Link selbst, kein Server erhält sie.</p>
             <p class="hinweis">„Nächster Auftrag“ behält Absender, Einsatz, Lage, Logistik, Führung und Verbindung sowie die Unterschriftszeile, leert Empfänger, Auftrag, Durchführung und „Abgesandt“ und zählt die lfd. Nr. hoch.</p>
             <p class="nebentext" id="entwurf-stand"></p>
             <label class="datei-ziel" id="einzeln-ziel">

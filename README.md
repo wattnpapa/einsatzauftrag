@@ -11,6 +11,7 @@ Gegenüber dem Word-Formular hat Abschnitt 4 auch die Zeile 4d (Instandsetzung),
 Unter `web/` liegt eine Web-App, veröffentlicht unter [einsatzauftrag.app](https://einsatzauftrag.app/) über GitHub Pages. Sie füllt einen einzelnen Einsatzauftrag über eine Eingabemaske mit Live-Vorschau aus oder erzeugt viele auf einmal aus einer Excel- oder CSV-Tabelle (eine Zeile je Auftrag). Excel- und CSV-Vorlage gibt es dort zum Herunterladen. Alles läuft im Browser, nichts wird hochgeladen; nach dem ersten Aufruf startet die App auch ohne Netz.
 
 Jede PDF aus der App trägt die eingegebenen Felder zusätzlich in ihren Metadaten (Eintrag „Keywords“, `einsatzauftrag:v1:` und die Daten als komprimiertes JSON in base64url), so dass die nächste Schicht die Datei einfach wieder in die App zieht und weiterarbeitet, statt abzutippen; eine PDF mit mehreren Aufträgen erscheint dabei wie eine eingelesene Tabelle. Ein Ausdruck trägt diese Daten nicht, und eine PDF, die erneut gedruckt, in einem anderen Programm gespeichert oder mit anderen zusammengeführt wurde, verliert sie meist.
+„Link teilen“ legt dieselben Daten in das Fragment eines Links (`#a=…`); das Fragment schickt der Browser an keinen Server, die App liest es beim Öffnen und übernimmt den Auftrag in die Maske.
 
 ```bash
 npm run web          # Entwicklungsserver

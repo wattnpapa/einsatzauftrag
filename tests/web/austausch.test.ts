@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BESCHAEDIGT, dekodiereWerte, findePdfDaten, istPdf, KEINE_PDF_DATEN, kodiereWerte, leseAusPdf, PDF_KENNUNG } from "../../web/src/austausch.js";
+import { BESCHAEDIGT, datenAusFragment, dekodiereWerte, findePdfDaten, istPdf, KEINE_PDF_DATEN, kodiereWerte, leseAusPdf, linkMitDaten, PDF_KENNUNG, tausender } from "../../web/src/austausch.js";
 import type { Werte } from "../../web/src/felder.js";
 import { erzeugePdf } from "../../web/src/pdf.js";
 
@@ -99,5 +99,28 @@ describe("PDF mit Auftragsdaten", () => {
         expect(istPdf("Auftrag.PDF", "", leer)).toBe(true);
         expect(istPdf("auftrag", "application/pdf", leer)).toBe(true);
         expect(istPdf("auftraege.csv", "text/csv", new TextEncoder().encode("Empfänger;Auftrag"))).toBe(false);
+    });
+});
+
+describe("Link", () => {
+    it("legt die Daten ins Fragment und findet sie dort wieder", async () => {
+        const kodiert = await kodiereWerte(voll);
+        const link = linkMitDaten("https://einsatzauftrag.app/", kodiert);
+        expect(link).toBe(`https://einsatzauftrag.app/#a=${kodiert}`);
+        const fragment = new URL(link).hash;
+        expect(datenAusFragment(fragment)).toBe(kodiert);
+        expect(await dekodiereWerte(datenAusFragment(fragment) ?? "")).toEqual([voll]);
+    });
+
+    it("übergeht andere Fragmente", () => {
+        expect(datenAusFragment("")).toBeUndefined();
+        expect(datenAusFragment("#inhalt")).toBeUndefined();
+        expect(datenAusFragment("#a=")).toBe("");
+    });
+
+    it("trennt Tausender mit Leerzeichen", () => {
+        expect(tausender(999)).toBe("999");
+        expect(tausender(1234)).toBe("1 234");
+        expect(tausender(1234567)).toBe("1 234 567");
     });
 });
