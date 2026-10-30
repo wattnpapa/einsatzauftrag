@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { zeichneEinsatzauftrag, type EinsatzauftragOptionen } from "../../src/index.js";
+import { kodiereWerte, PDF_KENNUNG } from "./austausch.js";
 import { zuDaten, type Werte } from "./felder.js";
 
 /** Herkunftszeile am Blattrand jedes Auftrags, den diese App erzeugt. */
@@ -11,10 +12,16 @@ export interface Ergebnis {
     seiten: number[];
 }
 
-/** Setzt alle Aufträge in eine PDF; jeder beginnt auf einer neuen Seite. */
-export function erzeugePdf(alle: readonly Werte[], optionen: EinsatzauftragOptionen, { komprimiert = true } = {}): Ergebnis {
+/**
+ * Setzt alle Aufträge in eine PDF; jeder beginnt auf einer neuen Seite. Die
+ * Feldwerte aller Aufträge stehen zusätzlich kodiert im Info-Eintrag
+ * „Keywords“ (`einsatzauftrag:v1:<base64url>`), damit die App die PDF wieder
+ * einlesen kann. Asynchron, weil die Kompression über CompressionStream läuft.
+ */
+export async function erzeugePdf(alle: readonly Werte[], optionen: EinsatzauftragOptionen, { komprimiert = true } = {}): Promise<Ergebnis> {
+    const daten = await kodiereWerte(alle);
     const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "p", compress: komprimiert });
-    pdf.setProperties({ title: alle.length === 1 ? "Einsatzauftrag" : "Einsatzaufträge", creator: "einsatzauftrag" });
+    pdf.setProperties({ title: alle.length === 1 ? "Einsatzauftrag" : "Einsatzaufträge", creator: "einsatzauftrag", keywords: `${PDF_KENNUNG}${daten}` });
     const seiten = alle.map((werte, index) => {
         if (index > 0) {
             pdf.addPage("a4", "p");

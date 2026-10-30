@@ -4,8 +4,8 @@ import { dateiname, erzeugePdf, HERKUNFT } from "../../web/src/pdf.js";
 const lang = Array(60).fill("Deichabschnitt sichern, Sickerstellen markieren und dem Abschnittsleiter melden.").join(" ");
 
 describe("erzeugePdf", () => {
-    it("beginnt jeden Auftrag auf einer neuen Seite und zählt die Seiten je Auftrag", () => {
-        const { pdf, seiten } = erzeugePdf([{ empfaenger: "A" }, { empfaenger: "B", auftrag: lang }, { empfaenger: "C" }], {}, { komprimiert: false });
+    it("beginnt jeden Auftrag auf einer neuen Seite und zählt die Seiten je Auftrag", async () => {
+        const { pdf, seiten } = await erzeugePdf([{ empfaenger: "A" }, { empfaenger: "B", auftrag: lang }, { empfaenger: "C" }], {}, { komprimiert: false });
         expect(seiten[0]).toBe(1);
         expect(seiten[1]).toBeGreaterThan(1);
         expect(seiten[2]).toBe(1);
@@ -13,8 +13,8 @@ describe("erzeugePdf", () => {
         expect(pdf.output()).toContain(HERKUNFT);
     });
 
-    it("lässt die Fußzeile über die Optionen ändern", () => {
-        const { pdf } = erzeugePdf([{}], { fusszeile: "Eigene Zeile" }, { komprimiert: false });
+    it("lässt die Fußzeile über die Optionen ändern", async () => {
+        const { pdf } = await erzeugePdf([{}], { fusszeile: "Eigene Zeile" }, { komprimiert: false });
         const inhalt = pdf.output();
         expect(inhalt).toContain("Eigene Zeile");
         expect(inhalt).not.toContain(HERKUNFT);

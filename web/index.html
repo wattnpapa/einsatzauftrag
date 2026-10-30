@@ -128,6 +128,12 @@
             </div>
             <p class="hinweis">„Nächster Auftrag“ behält Absender, Einsatz, Lage, Logistik, Führung und Verbindung sowie die Unterschriftszeile, leert Empfänger, Auftrag, Durchführung und „Abgesandt“ und zählt die lfd. Nr. hoch.</p>
             <p class="nebentext" id="entwurf-stand"></p>
+            <label class="datei-ziel" id="einzeln-ziel">
+              <input type="file" id="einzeln-datei" class="nur-sr" accept=".pdf,application/pdf" />
+              <span class="datei-knopf" aria-hidden="true">PDF öffnen…</span>
+              <span class="nebentext">PDF aus dieser App hierher ziehen, um den Auftrag weiterzubearbeiten.</span>
+            </label>
+            <p class="fehler" id="einzeln-fehler" role="alert" hidden></p>
           </div>
         </div>
       </section>
@@ -145,9 +151,9 @@
           </section>
           <section class="karte">
             <h3>2. Ausgefüllte Datei einlesen</h3>
-            <p class="nebentext">Excel (.xlsx) oder CSV mit Semikolon, Komma oder Tabulator. Die Spalten werden am Kopf erkannt, die Reihenfolge ist egal.</p>
+            <p class="nebentext">Excel (.xlsx) oder CSV mit Semikolon, Komma oder Tabulator. Die Spalten werden am Kopf erkannt, die Reihenfolge ist egal. Eine PDF aus dieser App lässt sich ebenfalls wieder einlesen.</p>
             <label class="datei-ziel" id="datei-ziel">
-              <input type="file" id="datei" class="nur-sr" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" />
+              <input type="file" id="datei" class="nur-sr" accept=".xlsx,.csv,.tsv,.txt,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/pdf" />
               <span class="datei-knopf primaer" aria-hidden="true">Datei auswählen…</span>
               <span class="nebentext">oder hierher ziehen</span>
             </label>

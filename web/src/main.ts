@@ -2,6 +2,7 @@
 import { jsPDF } from "jspdf";
 import "./seite.js";
 import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type EinsatzauftragOptionen } from "../../src/index.js";
+import { istPdf, leseAusPdf } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
 import { FELDER, fuehrungText, fuehrungZeilen, hatInhalt, leseTabelle, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
 import { leseLogo } from "./logo.js";
@@ -428,28 +429,45 @@ function vorschauJetzt(): void {
 
 // ---- Aktionen der Maske ------------------------------------------------------------
 
-function pdfEinzeln(): { blob: Blob; name: string } {
+async function pdfEinzeln(): Promise<{ blob: Blob; name: string }> {
     const werte = werteDerMaske();
-    const { pdf } = erzeugePdf([werte], optionen());
+    const { pdf } = await erzeugePdf([werte], optionen());
     return { blob: pdf.output("blob"), name: dateiname(1, new Date(), werte.laufendeNummer ?? "") };
 }
 
-el("einzeln-pdf").addEventListener("click", () => {
-    const { blob, name } = pdfEinzeln();
-    herunterladen(blob, name);
-    kurzmeldung(`${name} heruntergeladen.`);
+function fehlertext(fehler: unknown): string {
+    return fehler instanceof Error ? fehler.message : String(fehler);
+}
+
+el("einzeln-pdf").addEventListener("click", async () => {
+    try {
+        const { blob, name } = await pdfEinzeln();
+        herunterladen(blob, name);
+        kurzmeldung(`${name} heruntergeladen.`);
+    } catch (fehler) {
+        kurzmeldung(`Die PDF ließ sich nicht erzeugen: ${fehlertext(fehler)}`);
+    }
 });
 
-el("einzeln-drucken").addEventListener("click", () => {
-    const { blob, name } = pdfEinzeln();
-    const url = URL.createObjectURL(blob);
-    const fenster = window.open(url, "_blank");
-    if (!fenster) {
-        // Kein neues Fenster erlaubt (Popup-Sperre): dann eben herunterladen.
-        herunterladen(blob, name);
-        kurzmeldung("Der Browser hat das neue Fenster gesperrt; die PDF wurde stattdessen heruntergeladen.");
+el("einzeln-drucken").addEventListener("click", async () => {
+    // Das Fenster sofort im Klick öffnen; erst danach entsteht die PDF
+    // asynchron. Sonst sperren manche Browser das Fenster als Popup.
+    const fenster = window.open("", "_blank");
+    try {
+        const { blob, name } = await pdfEinzeln();
+        const url = URL.createObjectURL(blob);
+        if (fenster && !fenster.closed) {
+            fenster.location.href = url;
+        } else {
+            // Kein neues Fenster erlaubt (Popup-Sperre): dann eben herunterladen.
+            herunterladen(blob, name);
+            kurzmeldung("Der Browser hat das neue Fenster gesperrt; die PDF wurde stattdessen heruntergeladen.");
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    } catch (fehler) {
+        fenster?.close();
+        kurzmeldung(`Die PDF ließ sich nicht erzeugen: ${fehlertext(fehler)}`);
     }
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
 });
 
 /** Was „Nächster Auftrag“ leert. */
@@ -558,12 +576,42 @@ el("vorlage-csv").addEventListener("click", () => {
     herunterladen(new Blob([schreibeCsv(vorlageTabelle())], { type: "text/csv;charset=utf-8" }), "einsatzauftraege_vorlage.csv");
 });
 
-async function leseDatei(datei: File): Promise<void> {
-    const fehler = el("tabelle-fehler");
-    fehler.hidden = true;
+/** Eingelesene Aufträge übernehmen: einer kommt in die Maske, mehrere wie eine Tabelle. */
+function uebernimmAuftraege(auftraege: readonly Werte[], quelle: string, meldung: string): void {
+    const [einziger] = auftraege;
+    if (auftraege.length === 1 && einziger) {
+        const vorher = werteDerMaske();
+        setzeWerte(einziger);
+        waehleReiter(0);
+        kurzmeldung(meldung, () => setzeWerte(vorher));
+        return;
+    }
+    tabelle = {
+        name: quelle,
+        zeilen: auftraege.map((werte, index) => ({ zeile: index + 1, werte })),
+        hinweise: [`Wieder eingelesen aus einer PDF dieser App. „Zeile“ ist hier die Reihenfolge der Aufträge in der PDF.`]
+    };
+    el("tabelle-fehler").hidden = true;
+    zeigeTabelle();
+    waehleReiter(1);
+}
+
+/**
+ * Liest eine Tabelle (Excel, CSV) oder eine PDF dieser App ein. `fehler` ist
+ * die Stelle, an der ein Fehler erscheint: beim Ziel, auf das die Datei fiel.
+ */
+async function leseDatei(datei: File, fehler = el("tabelle-fehler")): Promise<void> {
+    el("tabelle-fehler").hidden = true;
+    el("einzeln-fehler").hidden = true;
+    let pdf = false;
     try {
         const hinweise: string[] = [];
         const bytes = await datei.arrayBuffer();
+        if (istPdf(datei.name, datei.type, bytes)) {
+            pdf = true;
+            uebernimmAuftraege(await leseAusPdf(bytes), datei.name, `Auftrag aus ${datei.name} übernommen.`);
+            return;
+        }
         let roh: string[][];
         if (/\.xlsx$/i.test(datei.name) || datei.type.includes("spreadsheetml")) {
             const { leseExcel } = await import("./excel.js");
@@ -580,10 +628,14 @@ async function leseDatei(datei: File): Promise<void> {
         }
         tabelle = { name: datei.name, zeilen: gelesen.zeilen, hinweise };
         zeigeTabelle();
+        waehleReiter(1);
     } catch (grund) {
-        tabelle = undefined;
-        el("ergebnis").hidden = true;
-        fehler.textContent = grund instanceof Error ? grund.message : String(grund);
+        // Eine PDF ohne Daten verwirft keine schon eingelesene Tabelle.
+        if (!pdf) {
+            tabelle = undefined;
+            el("ergebnis").hidden = true;
+        }
+        fehler.textContent = fehlertext(grund);
         fehler.hidden = false;
     }
 }
@@ -643,38 +695,65 @@ function zeigeTabelle(): void {
     el("ergebnis").hidden = false;
 }
 
-el<HTMLInputElement>("datei").addEventListener("change", ereignis => {
-    const eingabe = ereignis.target as HTMLInputElement;
-    const datei = eingabe.files?.[0];
-    eingabe.value = "";
-    if (datei) {
-        void leseDatei(datei);
+/** Dateiauswahl und Drop-Ziel; ein Fehler erscheint in `fehler` beim Ziel. */
+function dateiZiel(eingabe: HTMLInputElement, ziel: HTMLElement, fehler: HTMLElement): void {
+    eingabe.addEventListener("change", () => {
+        const datei = eingabe.files?.[0];
+        eingabe.value = "";
+        if (datei) {
+            void leseDatei(datei, fehler);
+        }
+    });
+    ziel.addEventListener("dragover", ereignis => {
+        ereignis.preventDefault();
+        ziel.classList.add("ueber");
+    });
+    ziel.addEventListener("dragleave", () => ziel.classList.remove("ueber"));
+    ziel.addEventListener("drop", ereignis => {
+        ereignis.preventDefault();
+        ereignis.stopPropagation();
+        ziel.classList.remove("ueber");
+        const datei = ereignis.dataTransfer?.files[0];
+        if (datei) {
+            void leseDatei(datei, fehler);
+        }
+    });
+}
+
+dateiZiel(el<HTMLInputElement>("datei"), el("datei-ziel"), el("tabelle-fehler"));
+dateiZiel(el<HTMLInputElement>("einzeln-datei"), el("einzeln-ziel"), el("einzeln-fehler"));
+
+// Eine Datei neben das Ziel fallen gelassen: nicht die Seite verlassen und die
+// Datei öffnen, sondern genauso einlesen. Gezogener Text bleibt unberührt.
+const mitDatei = (ereignis: DragEvent) => Boolean(ereignis.dataTransfer?.types.includes("Files"));
+document.addEventListener("dragover", ereignis => {
+    if (mitDatei(ereignis)) {
+        ereignis.preventDefault();
     }
 });
-
-const ziel = el("datei-ziel");
-ziel.addEventListener("dragover", ereignis => {
+document.addEventListener("drop", ereignis => {
+    if (!mitDatei(ereignis)) {
+        return;
+    }
     ereignis.preventDefault();
-    ziel.classList.add("ueber");
-});
-ziel.addEventListener("dragleave", () => ziel.classList.remove("ueber"));
-ziel.addEventListener("drop", ereignis => {
-    ereignis.preventDefault();
-    ziel.classList.remove("ueber");
     const datei = ereignis.dataTransfer?.files[0];
     if (datei) {
-        void leseDatei(datei);
+        void leseDatei(datei, el("ansicht-einzeln").hidden ? el("tabelle-fehler") : el("einzeln-fehler"));
     }
 });
 
-el("tabelle-pdf").addEventListener("click", () => {
+el("tabelle-pdf").addEventListener("click", async () => {
     if (!tabelle) {
         return;
     }
-    const { pdf } = erzeugePdf(tabelle.zeilen.map(zeile => zeile.werte), optionen());
-    const name = dateiname(tabelle.zeilen.length, new Date(), tabelle.zeilen[0]?.werte.laufendeNummer ?? "");
-    herunterladen(pdf.output("blob"), name);
-    kurzmeldung(`${name} heruntergeladen.`);
+    try {
+        const { pdf } = await erzeugePdf(tabelle.zeilen.map(zeile => zeile.werte), optionen());
+        const name = dateiname(tabelle.zeilen.length, new Date(), tabelle.zeilen[0]?.werte.laufendeNummer ?? "");
+        herunterladen(pdf.output("blob"), name);
+        kurzmeldung(`${name} heruntergeladen.`);
+    } catch (fehler) {
+        kurzmeldung(`Die PDF ließ sich nicht erzeugen: ${fehlertext(fehler)}`);
+    }
 });
 
 // ---- Start ------------------------------------------------------------------------
