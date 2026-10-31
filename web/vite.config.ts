@@ -29,7 +29,7 @@ const FASSUNG = fassung();
  * Setzt in jede Seite eine Content Security Policy. GitHub Pages lässt keine
  * eigenen Header zu, deshalb als <meta>. Die kurzen Inline-Skripte und das
  * Inline-Stylesheet im Kopf werden über ihren Hash freigegeben, nicht über
- * „unsafe-inline“. Fremd ist nur das Zählskript von gc.zgo.at; es darf
+ * „unsafe-inline“. Das Zählskript liefert die App selbst aus (public/zaehler.js); es darf
  * ausschließlich zu einsatzauftrag.goatcounter.com senden.
  */
 function sicherheit(): Plugin {
@@ -45,7 +45,7 @@ function sicherheit(): Plugin {
                 const formate = inline(/<style[^>]*>([\s\S]*?)<\/style>/g);
                 const regeln = [
                     "default-src 'none'",
-                    `script-src 'self' https://gc.zgo.at ${skripte.join(" ")}`.trim(),
+                    `script-src 'self' ${skripte.join(" ")}`.trim(),
                     `style-src 'self' ${formate.join(" ")}`.trim(),
                     "img-src 'self' data: blob: https://einsatzauftrag.goatcounter.com",
                     "font-src 'self' data:",

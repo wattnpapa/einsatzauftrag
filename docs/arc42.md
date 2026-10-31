@@ -69,7 +69,7 @@ flowchart LR
 | Nachbar | Schnittstelle | Was fließt |
 | --- | --- | --- |
 | GitHub Pages | HTTPS, Abruf statischer Dateien | Seiten, Programmcode, Schrift, Symbole. Dabei fällt die IP-Adresse in Server-Logs an. |
-| GoatCounter (`gc.zgo.at`, `einsatzauftrag.goatcounter.com`) | Zählskript, nach dem Laden der Seite eingebunden | Aufgerufene Seite, Titel, Referrer, Bildschirmbreite, Browser, System, Land. Keine Eingaben. |
+| GoatCounter (`einsatzauftrag.goatcounter.com`) | Zählskript `zaehler.js` (selbst ausgeliefert, nach dem Laden der Seite eingebunden), Zählimpuls per `sendBeacon` | Aufgerufene Seite, Titel, Referrer, Bildschirmbreite, Browser, System, Land. Keine Eingaben. |
 | Browser-Speicher | `localStorage`, Cache Storage | Einstellungen, Entwurf, Logo, Anzeigemodus; statische Dateien für den Offline-Start. |
 | Dateisystem des Nutzers | Datei-Dialog, Download, Drag and drop | PDF, xlsx, csv, Logo. |
 | Zwischenablage | `navigator.clipboard` | Link zum Auftrag. |
@@ -245,8 +245,8 @@ Mit `uebung: true` trägt jede Seite quer das hellrote Wasserzeichen „ÜBUNG�
 Die Verarbeitung von Auftragsinhalten bleibt auf dem Gerät. Offen bleibt, was der Nutzer selbst weitergibt: Die PDF trägt ihre Eingaben maschinenlesbar in den Metadaten, ein geteilter Link enthält sie vollständig. Die Bewertung steht in `docs/dsfa.md`. Technisch gilt:
 
 - Es gibt keine Cookies.
-- Das einzige nachgeladene Skript fremder Herkunft ist `gc.zgo.at/count.js`. Es läuft im Kontext der Seite und könnte deren Inhalt lesen; das ist als Risiko in der DSFA geführt.
-- Jede Seite trägt eine Content Security Policy als `<meta>`, weil GitHub Pages keine eigenen Header erlaubt. `vite.config.ts` (Plugin `sicherheit`) setzt sie beim Bauen ein und gibt die kurzen Inline-Skripte und das Inline-Stylesheet über ihren SHA-256-Hash frei. Fremde Skripte sind nur von `gc.zgo.at` erlaubt, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`. `frame-ancestors` lässt sich per `<meta>` nicht setzen. Im Entwicklungsserver gilt die Policy nicht.
+- Die App lädt keine Skripte fremder Herkunft. Das Zählskript von GoatCounter (`count.js`, ISC-Lizenz) liegt als `web/public/zaehler.js` im Repository, in der geprüften Fassung vom 31.10.2026. Es läuft im Kontext der Seite, ist aber festgehalten und sendet nur per `sendBeacon` an den Zählpunkt. Neue Fassungen von GoatCounter kommen nicht von selbst an; ändert GoatCounter das Verfahren, bricht die Messung still ab, bis die Datei erneuert ist.
+- Jede Seite trägt eine Content Security Policy als `<meta>`, weil GitHub Pages keine eigenen Header erlaubt. `vite.config.ts` (Plugin `sicherheit`) setzt sie beim Bauen ein und gibt die kurzen Inline-Skripte und das Inline-Stylesheet über ihren SHA-256-Hash frei. Skripte sind nur von der eigenen Herkunft erlaubt, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`. `frame-ancestors` lässt sich per `<meta>` nicht setzen. Im Entwicklungsserver gilt die Policy nicht.
 - Eingaben werden nie als HTML eingefügt, sondern über `textContent`; die Vorschau baut SVG-Elemente aus Zeichenelementen.
 
 ### 8.6 Tests
@@ -297,7 +297,7 @@ Datensparsamkeit, Verlässlichkeit und Treue zum Vordruck stehen oben (Abschnitt
 
 | Nr. | Punkt | Auswirkung | Maßnahme |
 | --- | --- | --- | --- |
-| R1 | Zählskript von `gc.zgo.at` läuft im Seitenkontext und hat Zugriff auf Eingaben. | Ein kompromittiertes Skript könnte Auftragsinhalte lesen. Die CSP verhindert nur das Senden an andere Ziele als GoatCounter, nicht das Lesen. | Zählskript selbst ausliefern (Version festhalten) oder Messung abschalten (offen, DSFA M2). |
+| R1 | Das Zählskript läuft im Seitenkontext und hat Zugriff auf Eingaben. | Es ist festgehalten und selbst ausgeliefert, kann sich also nicht ändern, ohne dass ein Commit nötig ist. Die CSP erlaubt ihm nur Verbindungen zum Zählpunkt. Verbleibend: Es erneuert sich nicht von selbst. | Datei bei Bedarf erneuern und dabei prüfen (DSFA M2, umgesetzt). Wer ganz sicher gehen will, schaltet die Messung ab. |
 | R2 | Ohne `frame-ancestors` und ohne eigene Header kann die Seite eingebettet werden. | Clickjacking auf die Maske. | Im Browser-Skript prüfen, ob `window.top` gleich `window` ist, oder anderen Host mit Headern wählen. |
 | R3 | Entwurf bleibt bis zur Frist unverschlüsselt im `localStorage`. | Auf gemeinsam genutzten Geräten lesbar. | Frist 24 Stunden, wählbar; Hinweis in der Datenschutzerklärung. Verschlüsselung wäre ohne Schlüsselverwaltung wirkungslos. |
 | R4 | Link und PDF enthalten alle Eingaben lesbar. | Weitergabe über Messenger oder Mail fügt einen Dritten hinzu. | Hinweise neben der Funktion und in der Meldung nach dem Kopieren sind da; Abschalten der Funktion für die einsetzende Stelle offen (DSFA M4). |

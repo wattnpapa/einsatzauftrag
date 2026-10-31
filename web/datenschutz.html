@@ -32,12 +32,12 @@
   <!-- Reichweitenmessung, siehe datenschutz.html Punkt 5. Widerspruch über
        localStorage „skipgc“, den count.js selbst auswertet. -->
   <script>
-    // Erst nach dem Laden einbinden: Antwortet gc.zgo.at nicht, dreht sonst
+    // Erst nach dem Laden einbinden: Antwortet der Zählpunkt nicht, dreht sonst
     // die Ladeanzeige des Browsers weiter, obwohl die Seite längst bereit ist.
     addEventListener("load", function () {
       var zaehler = document.createElement("script");
       zaehler.async = true;
-      zaehler.src = "https://gc.zgo.at/count.js";
+      zaehler.src = "./zaehler.js";
       zaehler.setAttribute("data-goatcounter", "https://einsatzauftrag.goatcounter.com/count");
       document.head.appendChild(zaehler);
     });
@@ -76,7 +76,7 @@
         Verbindungsdaten wie die IP-Adresse in Server-Logs, um den Dienst bereitzustellen und abzusichern. Rechtsgrundlage
         ist Art. 6 Abs. 1 lit. f DSGVO. Einzelheiten stehen im
         <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</p>
-      <p>Außer dem Zählskript aus Punkt 5 lädt die Seite keine Inhalte von anderen Servern nach. Die Schrift ist Teil
+      <p>Außer dem Zählimpuls aus Punkt 5 nimmt die Seite keinen Kontakt zu anderen Servern auf. Die Schrift ist Teil
         der Seite selbst, es gibt keine Werbung und keine weiteren eingebundenen Dienste.</p>
 
       <h2>3. Eingaben, Tabellen und PDF</h2>
@@ -106,7 +106,7 @@
 
       <h2>5. Reichweitenmessung</h2>
       <p>Zur Reichweitenmessung wird <a href="https://www.goatcounter.com/">GoatCounter</a> eingesetzt. Beim Aufruf
-        einer Seite lädt der Browser ein Zählskript von gc.zgo.at und sendet einen Zählimpuls. Übertragen werden dabei
+        einer Seite führt der Browser ein Zählskript aus, das die Seite selbst ausliefert (kein Nachladen von fremden Servern), und sendet einen Zählimpuls an GoatCounter. Übertragen werden dabei
         die aufgerufene Seite (etwa „/“ oder „/datenschutz.html“), ihr Titel, die verweisende Seite und die
         Bildschirmbreite; aus der Verbindung ergeben sich zusätzlich Browser, Betriebssystem und Land. Die IP-Adresse
         dient nur dazu, wiederholte Aufrufe innerhalb eines Tages zu erkennen, und wird nicht gespeichert. Es werden

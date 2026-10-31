@@ -88,7 +88,7 @@ Kein Auftragsinhalt wird von der App an einen Server gesendet. Das lässt sich i
 | Empfänger / Auftragsverarbeiter | Rolle | Daten | Stand |
 | --- | --- | --- | --- |
 | GitHub Inc. (Microsoft), USA | Hosting der Website | Verbindungsdaten | Drittlandübermittlung; Grundlage (Angemessenheitsbeschluss zum EU-US Data Privacy Framework, Zertifizierung) und Vertrag zur Auftragsverarbeitung sind zu klären. |
-| GoatCounter | Reichweitenmessung | Zählimpuls | Sitz, Hosting und Vertrag sind zu klären. Das Skript wird von `gc.zgo.at` geladen, Zählimpulse gehen an `einsatzauftrag.goatcounter.com`. |
+| GoatCounter | Reichweitenmessung | Zählimpuls | Sitz, Hosting und Vertrag sind zu klären. Das Skript liefert die App selbst aus (`web/public/zaehler.js`), Zählimpulse gehen an `einsatzauftrag.goatcounter.com`. |
 | Empfänger von PDF oder Link | Vom Nutzer gewählt | Alle Eingaben | Außerhalb der App. |
 
 ## 4. Notwendigkeit und Verhältnismäßigkeit
@@ -116,7 +116,7 @@ Bewertet wird das Risiko für die Betroffenen, nicht für den Betreiber. Eintrit
 | R1 | Unbefugter liest den Entwurf auf einem gemeinsam genutzten oder verlorenen Gerät. | Entwurf im `localStorage`, unverschlüsselt, ohne Frist | mittel | mittel bis hoch (Namen, Anschriften, möglicherweise Gesundheitsangaben) | mittel |
 | R2 | Link mit allen Eingaben gelangt über einen Messenger oder ein Mailsystem an Dritte oder bleibt dort dauerhaft gespeichert. | Funktion "Link teilen" | mittel | mittel | mittel |
 | R3 | PDF enthält die Eingaben zusätzlich maschinenlesbar in den Metadaten und wird an Stellen weitergegeben, die nur den ausgedruckten Auftrag sehen sollten. | Eintrag `Keywords` | gering (die Metadaten enthalten nur Felder, die auch auf der Seite stehen) | gering bis mittel | gering |
-| R4 | Das Zählskript von `gc.zgo.at` wird kompromittiert oder verändert und liest Eingaben aus der Seite. | Fremdskript im Kontext der Seite, keine Content Security Policy | gering | hoch | mittel |
+| R4 | Das Zählskript wird kompromittiert oder verändert und liest Eingaben aus der Seite. | Skript im Kontext der Seite. Ursprünglich von `gc.zgo.at` nachgeladen, nach M1 und M2 selbst ausgeliefert und festgehalten, Verbindungen nur zum Zählpunkt. | gering | hoch | mittel (vor M1 und M2) |
 | R5 | Skript-Einschleusung über eine Schwachstelle der App (XSS) exfiltriert Eingaben. | Eingabeverarbeitung | gering (Eingaben werden per `textContent` und SVG-Elementen ausgegeben, kein `innerHTML` im Code) | hoch | gering |
 | R6 | Verbindungsdaten und Zählimpuls ermöglichen Rückschlüsse auf einzelne Nutzer. | GitHub Pages, GoatCounter | gering | gering | gering |
 | R7 | Drittlandübermittlung der Verbindungsdaten an GitHub (USA). | Hosting | mittel | gering | gering |
@@ -147,7 +147,7 @@ Bewertung der Risiken zu Rechten und Freiheiten: Für alle genannten Risiken au�
 | B11 | Wasserzeichen "ÜBUNG" auf jeder Seite, Fußzeile nennt es; Übungsband in der Maske. | R9 |
 | B12 | Tabellen werden nicht gespeichert. Der Cache enthält nur statische Dateien. | R11 |
 | B13 | Quelloffen unter EUPL-1.2, Tests für Satz, Austausch, Tabellen und PDF. | R5, R8 |
-| B14 | Content Security Policy in allen drei Seiten (Maßnahme M1): `default-src 'none'`, Skripte nur von der eigenen Herkunft, `gc.zgo.at` und per Hash freigegebene Inline-Skripte, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, kein `object`, keine fremden Formularziele. | R4, R5 |
+| B14 | Content Security Policy in allen drei Seiten (Maßnahme M1): `default-src 'none'`, Skripte nur von der eigenen Herkunft und per Hash freigegebene Inline-Skripte, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, kein `object`, keine fremden Formularziele. | R4, R5 |
 | B15 | Hinweise neben "Link teilen", in der Meldung nach dem Kopieren und neben dem PDF-Download (Maßnahme M3). | R2, R3 |
 | B16 | Entwurf verfällt nach 24 Stunden, wählbar 7 Tage oder gar nicht speichern (Maßnahme M5). | R1, R11 |
 
@@ -155,8 +155,8 @@ Bewertung der Risiken zu Rechten und Freiheiten: Für alle genannten Risiken au�
 
 | Nr. | Maßnahme | Wirkt auf | Verantwortlich | Stand |
 | --- | --- | --- | --- | --- |
-| M1 | Content Security Policy per `<meta http-equiv>` in allen drei Seiten: Skripte nur von der eigenen Herkunft und von `gc.zgo.at`, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, keine Inline-Skripte außer den kurzen, mit Hash freigegebenen. Wird beim Bauen eingesetzt (`sicherheit()` in `web/vite.config.ts`). | R4, R5 | Betreiber | umgesetzt |
-| M2 | Zählskript selbst ausliefern oder auf die Messung verzichten, sobald die Bewertung der einsetzenden Stelle das verlangt. Alternativ Messung serverseitig über die Logs des Hosters. | R4 | Betreiber | offen |
+| M1 | Content Security Policy per `<meta http-equiv>` in allen drei Seiten: Skripte nur von der eigenen Herkunft, Verbindungen nur zur eigenen Herkunft und zu `einsatzauftrag.goatcounter.com`, keine Inline-Skripte außer den kurzen, mit Hash freigegebenen. Wird beim Bauen eingesetzt (`sicherheit()` in `web/vite.config.ts`). | R4, R5 | Betreiber | umgesetzt |
+| M2 | Zählskript selbst ausliefern: `count.js` von GoatCounter (ISC-Lizenz, Kopfzeile unverändert) liegt als `web/public/zaehler.js` im Repository, Stand 31.10.2026. Die Seiten laden `./zaehler.js`, die CSP erlaubt keine fremden Skripte mehr. Wer die Messung ganz ablehnt, entfernt den Ladeblock in den drei Seiten. Pflege: Datei bei Änderungen am Verfahren von GoatCounter erneuern und dabei auf neue Netzaufrufe prüfen. | R4 | Betreiber | umgesetzt |
 | M3 | Neben "Link teilen" und beim PDF-Download einen kurzen Hinweis anzeigen: enthält alle Eingaben lesbar, nur dorthin weitergeben, wo der Auftrag hin darf. | R2, R3 | Betreiber | umgesetzt |
 | M4 | Einstellung für die einsetzende Stelle, Link- und Metadaten-Funktion abzuschalten (z. B. über eine Konfigurationsdatei oder einen Parameter beim Bauen). Bei abgeschalteter Metadaten-Funktion trägt die PDF keine Eingaben im Eintrag `Keywords`. | R2, R3 | Betreiber | offen |
 | M5 | Entwurf nach einer Frist automatisch verwerfen: Standard 24 Stunden, wählbar 7 Tage oder keine Speicherung (`Einstellungen.entwurfStunden`). Der Stand unter den Knöpfen nennt die Frist; ein abgelaufener Entwurf wird beim Start mit Meldung gelöscht. | R1, R11 | Betreiber | umgesetzt |
@@ -168,7 +168,7 @@ Bewertung der Risiken zu Rechten und Freiheiten: Für alle genannten Risiken au�
 
 ## 7. Restrisiko
 
-Mit den umgesetzten Maßnahmen M1, M3 und M5 gilt (M2 und M4 sind offen und senken R4 und R2 weiter):
+Mit den umgesetzten Maßnahmen M1, M2, M3 und M5 gilt (M4 ist offen und senkt R2 weiter):
 
 | Nr. | Restrisiko | Bewertung |
 | --- | --- | --- |
@@ -183,9 +183,9 @@ Das Gesamtrisiko ist nach meiner Einschätzung gering, solange die Nutzer keine 
 
 Die Verarbeitung durch die App hat kein hohes Risiko für die Rechte und Freiheiten Betroffener, weil Auftragsinhalte das Gerät nicht verlassen und beim Betreiber nur Verbindungs- und Zähldaten ohne Personenbezug im engeren Sinn anfallen. Eine Konsultation der Aufsichtsbehörde nach Art. 36 DSGVO ist auf dieser Grundlage nicht erforderlich.
 
-Das gilt unter drei Bedingungen: Die einsetzende Stelle verantwortet Inhalte und Geräte selbst. Die offenen Maßnahmen (M2, M4, M6 bis M9) werden entschieden bzw. umgesetzt. Die Punkte in Abschnitt 9 werden geklärt.
+Das gilt unter drei Bedingungen: Die einsetzende Stelle verantwortet Inhalte und Geräte selbst. Die offenen Maßnahmen (M4, M6 bis M9) werden entschieden bzw. umgesetzt. Die Punkte in Abschnitt 9 werden geklärt.
 
-M1, M3 und M5 sind umgesetzt. M2 und M4 verlangen eine Entscheidung des Betreibers bzw. der einsetzenden Stelle.
+M1, M2, M3 und M5 sind umgesetzt. M4 verlangt eine Entscheidung des Betreibers bzw. der einsetzenden Stelle.
 
 ## 9. Zu klären
 
