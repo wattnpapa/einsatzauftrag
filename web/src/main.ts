@@ -288,7 +288,11 @@ function baueMaske(): void {
     const kopf = karte("Kopf");
     let reihe = zeile(kopf);
     eingabe(reihe, "absender", "Absender", "input", "", "z. B. ZTr TZ OV Oldenburg");
-    eingabe(reihe, "laufendeNummer", "Lfd. Nr.", "input", "schmal").setAttribute("inputmode", "numeric");
+    // Normale Tastatur: die lfd. Nr. darf Buchstaben enthalten („A-09“, „12b“).
+    const nummer = eingabe(reihe, "laufendeNummer", "Lfd. Nr.", "input", "schmal");
+    nummer.setAttribute("inputmode", "text");
+    nummer.setAttribute("autocapitalize", "characters");
+    nummer.setAttribute("autocomplete", "off");
     reihe = zeile(kopf);
     eingabe(reihe, "einsatz", "Für den Einsatz", "input", "", "z. B. Hochwasser Hunte 2026");
     eingabe(reihe, "empfaenger", "Empfänger", "input", "", "z. B. B-Gruppe 1. TZ");
