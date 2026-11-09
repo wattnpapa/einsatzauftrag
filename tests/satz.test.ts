@@ -254,3 +254,16 @@ describe("Abschnitt 5", () => {
         expect(linien(mitText)).toBe(linien(leer));
     });
 });
+
+describe("Tabulatoren", () => {
+    it("setzen den Text hinter dem Tabulator bündig, bei jeder Schriftgröße", () => {
+        for (const schriftgroesse of [10, 8]) {
+            const satz = setzeEinsatzauftrag(neuePdf(), { unterpunkte: { "1b": "Übungszeitraum:\t25.10.2024\n\t26.10.2024" } }, { schriftgroesse });
+            const elemente = (satz.seiten[0]?.elemente ?? []).filter((e): e is Extract<Element, { art: "text" }> => e.art === "text");
+            const [erste, zweite] = ["25.10.2024", "26.10.2024"].map(text => elemente.find(e => e.text === text));
+            expect(erste).toBeDefined();
+            expect(zweite?.x).toBe(erste?.x);
+            expect(elemente.some(e => e.text.includes("\t"))).toBe(false);
+        }
+    });
+});

@@ -246,7 +246,7 @@ input, select, textarea {
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea {
   min-height: calc(var(--ziel-basis) + var(--ziel));
 }
-textarea { resize: vertical; line-height: 1.45; }
+textarea { resize: vertical; line-height: 1.45; tab-size: 6; }
 /* Eigene Kästchen statt der grauen Browser-Kästchen: kräftiger Rand, auch in der Sonne zu sehen. */
 input[type="checkbox"], input[type="radio"] {
   appearance: none; -webkit-appearance: none;

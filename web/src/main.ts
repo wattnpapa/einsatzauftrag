@@ -272,7 +272,8 @@ function baueMaske(): void {
     eingabe(reihe, "laufendeNummer", "Lfd. Nr.", "input", "schmal").setAttribute("inputmode", "numeric");
     reihe = zeile(kopf);
     eingabe(reihe, "einsatz", "Für den Einsatz", "input", "", "z. B. Hochwasser Hunte 2026");
-    eingabe(reihe, "empfaenger", "Empfänger", "input", "", "z. B. B-Gruppe 1. TZ");
+    reihe = zeile(kopf);
+    eingabe(reihe, "empfaenger", "Empfänger", "textarea", "", "z. B. B-Gruppe 1. TZ, je Empfänger eine Zeile");
     // Übungskennzeichen wie im Erfassungsbogen: ein Haken, der bis ins PDF sichtbar bleibt.
     const uebung = document.createElement("label");
     uebung.className = "inline uebung-wahl";
@@ -286,6 +287,10 @@ function baueMaske(): void {
     uebungHinweis.className = "hinweis";
     uebungHinweis.textContent = "Jede Seite trägt dann quer das Wasserzeichen „ÜBUNG“, in Vorschau und PDF. „Nächster Auftrag“ behält den Haken.";
     kopf.appendChild(uebungHinweis);
+    const tabHinweis = document.createElement("p");
+    tabHinweis.className = "hinweis";
+    tabHinweis.textContent = "In mehrzeiligen Feldern setzt die Tab-Taste einen Tabstopp. Im Vordruck stehen Tabs untereinanderstehender Zeilen bündig, ein Tab je Spalte genügt; „•“ und Tab ergibt eine Liste. Esc, dann Tab springt ins nächste Feld.";
+    kopf.appendChild(tabHinweis);
 
     for (const abschnitt of ABSCHNITTE) {
         const behaelter = karte(`${abschnitt.nummer}. ${abschnitt.titel}`, abschnitt.unterpunkte.length > 0 ? undefined : abschnitt.erlaeuterung);
@@ -426,6 +431,32 @@ maske.addEventListener("input", ereignis => {
     geaendert();
 });
 maske.addEventListener("submit", ereignis => ereignis.preventDefault());
+
+// Tab setzt in Textfeldern einen Tabstopp wie in Word. Damit niemand im Feld
+// gefangen ist: Nach Esc springt Tab wie gewohnt weiter, Umschalt+Tab immer.
+let tabVerlaesst = false;
+maske.addEventListener("keydown", ereignis => {
+    const ziel = ereignis.target;
+    if (!(ziel instanceof HTMLTextAreaElement)) {
+        return;
+    }
+    if (ereignis.key === "Escape") {
+        tabVerlaesst = true;
+        return;
+    }
+    if (ereignis.key !== "Tab" || tabVerlaesst || ereignis.shiftKey || ereignis.altKey || ereignis.ctrlKey || ereignis.metaKey || ereignis.isComposing) {
+        return;
+    }
+    ereignis.preventDefault();
+    // insertText hält die Eingabe rückgängig machbar und löst „input“ aus.
+    if (!document.execCommand("insertText", false, "\t")) {
+        ziel.setRangeText("\t", ziel.selectionStart, ziel.selectionEnd, "end");
+        ziel.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+});
+maske.addEventListener("focusin", () => {
+    tabVerlaesst = false;
+});
 
 // ---- Vorschau -------------------------------------------------------------------
 

@@ -45,6 +45,8 @@ console.log(satz.seiten.length, satz.schriftgroesse);
 pdf.save("einsatzauftrag.pdf");
 ```
 
+Tabulatoren („\t“) in den mehrzeiligen Feldern setzt der Satz als Tabstopps. Aufeinanderfolgende Zeilen mit Tabulator bilden Spalten: Jede Spalte beginnt für alle diese Zeilen an derselben Stelle, hinter ihrem breitesten Text davor, auf einem Raster von 6,25 mm bei 10 pt, das mit der Schrift mitwächst. Ein Tabulator je Spalte genügt also, und die automatische Schriftgröße verschiebt nichts gegeneinander: `"Übungszeitraum:\t25.10.2024 18:00 Uhr\n\t26.10.2024 08:00 Uhr"` steht bündig. Bricht eine Zeile mit Tabulator um, beginnen die Folgezeilen am letzten Tabstopp; so wird `"•\tTHW OV Hoya\n•\tTHW OV Kiel"` eine Liste mit hängendem Einzug. In der Web-App setzt die Tab-Taste in mehrzeiligen Feldern einen Tabulator, nach Esc springt sie wie gewohnt ins nächste Feld.
+
 In `fuehrung` (Abschnitt 5) beginnt eine Leerzeile eine neue Formularzeile. Sollen Leerzeilen innerhalb einer Formularzeile stehen bleiben, die Zeilen als Liste übergeben: `fuehrung: ["Erreichbarkeiten:\n\nFüSt Rostock", "Führungsstelle Südtor 8"]`.
 
 Die erste Seite landet auf der aktuellen Seite der PDF, weitere werden angehängt. Für mehrere Aufträge in einer Datei vor jedem weiteren `pdf.addPage()` aufrufen.

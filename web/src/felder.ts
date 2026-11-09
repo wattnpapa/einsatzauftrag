@@ -66,7 +66,7 @@ export const FELDER: readonly Feld[] = [
         breite: 8
     },
     { schluessel: "laufendeNummer", titel: "Lfd. Nr.", beschreibung: "Laufende Nummer des Auftrags.", beispiel: "12", auch: ["Laufende Nummer", "Nr", "Nummer"], breite: 9 },
-    { schluessel: "empfaenger", titel: "Empfänger", beschreibung: "Wer den Auftrag erhält.", beispiel: "B-Gruppe 1. TZ", breite: 22 },
+    { schluessel: "empfaenger", titel: "Empfänger", beschreibung: "Wer den Auftrag erhält. Mehrere Empfänger je Zeile, auf Wunsch als Liste mit „•“ und Tabulator.", beispiel: "B-Gruppe 1. TZ", mehrzeilig: true, breite: 22 },
     ...UNTERPUNKTE.filter(punkt => punkt.startsWith("1")).map(unterpunktFeld),
     {
         schluessel: "auftrag",

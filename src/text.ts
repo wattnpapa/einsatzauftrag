@@ -17,6 +17,140 @@ export function umbrechen(pdf: jsPDF, text: string, maxWidth: number): string[] 
         absatz.trim() === "" ? [""] : pdf.splitTextToSize(trenneLangeWoerter(pdf, absatz, maxWidth), maxWidth) as string[]);
 }
 
+/** Ein Stück einer gesetzten Zeile: Text, der `x` mm hinter dem Zeilenanfang beginnt. */
+export interface Stueck {
+    readonly text: string;
+    readonly x: number;
+}
+
+/** Eine gesetzte Zeile. Ohne Tabulator ist es ein Stück bei 0, mit Tabulatoren eines je Tabstopp. */
+export type Zeile = readonly Stueck[];
+
+/**
+ * Bricht den Text wie `umbrechen`, setzt aber Tabulatoren als Tabstopps.
+ * Aufeinanderfolgende Zeilen mit Tabulator bilden Spalten wie elastische
+ * Tabstopps: Spalte k beginnt für alle diese Zeilen an derselben Stelle,
+ * hinter dem breitesten Text der Spalte davor, aufgerundet auf ein Vielfaches
+ * von `raster` (mm). Ein Tabulator je Spalte genügt also, damit
+ * „Übungszeitraum:⇥25.10.“ und „⇥26.10.“ bündig stehen, gleich bei welcher
+ * Schriftgröße. Bricht eine Zeile mit Tabulator um, beginnen ihre Folgezeilen
+ * am letzten Tabstopp (hängender Einzug, so wird „•⇥Text“ zur Liste), solange
+ * er in den linken drei Fünfteln der Breite liegt.
+ */
+export function umbrechenMitTabs(pdf: jsPDF, text: string, maxWidth: number, raster: number): Zeile[] {
+    const normal = String(text).replace(/\\n/g, "\n").replace(/\r\n?/g, "\n").replace(/\s+$/, "");
+    if (normal.trim() === "") {
+        return [];
+    }
+    const absaetze = normal.split("\n");
+    const zeilen: Zeile[] = [];
+    for (let index = 0; index < absaetze.length;) {
+        const absatz = absaetze[index] as string;
+        if (absatz.trim() === "") {
+            zeilen.push([{ text: "", x: 0 }]);
+            index++;
+        } else if (!absatz.includes("\t") || !(raster > 0)) {
+            zeilen.push(...(pdf.splitTextToSize(trenneLangeWoerter(pdf, absatz.replace(/\t/g, " "), maxWidth), maxWidth) as string[])
+                .map(zeile => [{ text: zeile, x: 0 }]));
+            index++;
+        } else {
+            let ende = index;
+            while (ende < absaetze.length && (absaetze[ende] as string).includes("\t")) {
+                ende++;
+            }
+            const block = absaetze.slice(index, ende);
+            const spalten = tabSpalten(pdf, block.map(zeile => zeile.split("\t")), maxWidth, raster);
+            for (const zeile of block) {
+                zeilen.push(...tabAbsatz(pdf, zeile, maxWidth, spalten, raster));
+            }
+            index = ende;
+        }
+    }
+    return zeilen;
+}
+
+/**
+ * Anfang jeder Spalte eines Blocks von Zeilen mit Tabulator; `undefined`, wo
+ * keine Spalte mehr in die Breite passt.
+ */
+function tabSpalten(pdf: jsPDF, zellen: readonly (readonly string[])[], maxWidth: number, raster: number): (number | undefined)[] {
+    const luecke = pdf.getTextWidth(" ");
+    const spalten: (number | undefined)[] = [0];
+    const anzahl = Math.max(...zellen.map(zeile => zeile.length));
+    for (let spalte = 1; spalte < anzahl; spalte++) {
+        const vorher = spalten[spalte - 1];
+        if (vorher === undefined) {
+            spalten.push(undefined);
+            continue;
+        }
+        let breiteste = 0;
+        for (const zeile of zellen) {
+            const breite = spalte < zeile.length ? vorher + pdf.getTextWidth(zeile[spalte - 1] ?? "") : 0;
+            // Was ohnehin umbricht, bestimmt keine Spalte.
+            if (breite <= maxWidth) {
+                breiteste = Math.max(breiteste, breite);
+            }
+        }
+        const anfang = (Math.floor((breiteste + luecke) / raster) + 1) * raster;
+        spalten.push(anfang < maxWidth ? anfang : undefined);
+    }
+    return spalten;
+}
+
+function tabAbsatz(pdf: jsPDF, absatz: string, maxWidth: number, spalten: readonly (number | undefined)[], raster: number): Zeile[] {
+    const zeilen: Stueck[][] = [];
+    let zeile: Stueck[] = [];
+    let stueck: Stueck | undefined;
+    let einzug = 0;
+    let cursor = 0;
+    const neueZeile = () => {
+        if (stueck) {
+            zeile.push(stueck);
+        }
+        zeilen.push(zeile);
+        zeile = [];
+        stueck = undefined;
+        cursor = einzug;
+    };
+    const luecke = pdf.getTextWidth(" ");
+    absatz.split("\t").forEach((teil, index) => {
+        if (index > 0) {
+            if (stueck) {
+                zeile.push(stueck);
+                cursor = stueck.x + pdf.getTextWidth(stueck.text);
+                stueck = undefined;
+            }
+            const mindestens = cursor + (zeile.length > 0 ? luecke : 0);
+            const spalte = spalten[index];
+            // Ist der Text davor umgebrochen und schon hinter der Spalte, der nächste Rasterstopp.
+            const stopp = spalte !== undefined && spalte >= mindestens ? spalte : (Math.floor(mindestens / raster) + 1) * raster;
+            if (stopp >= maxWidth) {
+                neueZeile();
+            } else {
+                cursor = stopp;
+                if (cursor <= maxWidth * 0.6) {
+                    einzug = cursor;
+                }
+            }
+        }
+        if (teil === "") {
+            return;
+        }
+        for (const wort of trenneLangeWoerter(pdf, teil, maxWidth - einzug).split(" ")) {
+            const kandidat: Stueck = stueck ? { text: `${stueck.text} ${wort}`, x: stueck.x } : { text: wort, x: cursor };
+            const leer = zeile.length === 0 && !stueck;
+            if (leer || kandidat.x + pdf.getTextWidth(kandidat.text) <= maxWidth) {
+                stueck = kandidat;
+            } else {
+                neueZeile();
+                stueck = { text: wort, x: cursor };
+            }
+        }
+    });
+    neueZeile();
+    return zeilen.map(stuecke => stuecke.filter(teil => teil.text !== "")).map(stuecke => stuecke.length > 0 ? stuecke : [{ text: "", x: 0 }]);
+}
+
 /**
  * Wörter, die breiter als eine Zeile sind, in Stücke teilen, statt sie ohne
  * Zeichen zu zerreißen: an eigenen Bruchstellen wie „/“ oder „-“ ohne Zusatz,

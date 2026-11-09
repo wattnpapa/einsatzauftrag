@@ -1,6 +1,6 @@
 import type { jsPDF } from "jspdf";
 import { ABSCHNITTE, type Abschnitt, type EinsatzauftragDaten } from "./daten.js";
-import { fuerPdf, kuerzeAufBreite, umbrechen } from "./text.js";
+import { fuerPdf, kuerzeAufBreite, umbrechenMitTabs, type Zeile } from "./text.js";
 
 // Satz des Einsatzauftrags: rechnet aus, was wohin kommt, und legt es als
 // Liste einfacher Zeichenelemente je Seite ab. Gezeichnet wird erst danach
@@ -164,6 +164,13 @@ function zeilenhoehe(groesse: number): number {
     return groesse * PT * 1.18;
 }
 
+/**
+ * Raster der Tabstopps in mm bei 10 pt, ein halber Word-Stopp. Es wächst und
+ * schrumpft mit der Schrift, damit die automatische Wahl der Schriftgröße
+ * nichts von einem Stopp auf den anderen springen lässt.
+ */
+const TABSTOPP = 6.25;
+
 /** Abstand von der Oberkante einer Textzeile bis zur Grundlinie. */
 function oberlaenge(groesse: number): number {
     return groesse * PT * 0.86;
@@ -212,23 +219,28 @@ function druckbareDaten(daten: EinsatzauftragDaten): EinsatzauftragDaten {
     const ergebnis: EinsatzauftragDaten = {};
     for (const [schluessel, wert] of Object.entries(daten) as [keyof EinsatzauftragDaten, unknown][]) {
         if (typeof wert === "string") {
-            (ergebnis as Record<string, unknown>)[schluessel] = fuerPdf(wert);
+            (ergebnis as Record<string, unknown>)[schluessel] = druckbar(wert);
         } else if (typeof wert === "boolean") {
             (ergebnis as Record<string, unknown>)[schluessel] = wert;
         } else if (Array.isArray(wert)) {
-            (ergebnis as Record<string, unknown>)[schluessel] = wert.map(text => typeof text === "string" ? fuerPdf(text) : text);
+            (ergebnis as Record<string, unknown>)[schluessel] = wert.map(text => typeof text === "string" ? druckbar(text) : text);
         } else if (wert && typeof wert === "object") {
             (ergebnis as Record<string, unknown>)[schluessel] = Object.fromEntries(Object.entries(wert as Record<string, unknown>)
-                .map(([punkt, text]) => [punkt, typeof text === "string" ? fuerPdf(text) : text]));
+                .map(([punkt, text]) => [punkt, typeof text === "string" ? druckbar(text) : text]));
         }
     }
     return ergebnis;
 }
 
+/** `fuerPdf`, aber Tabulatoren bleiben für den Satz stehen. */
+function druckbar(text: string): string {
+    return text.split("\t").map(fuerPdf).join("\t");
+}
+
 interface Textzeilen {
     /** Kennung in der linken Spalte, z. B. „1a“; leer bei freien Zeilen. */
     kennung: string;
-    zeilen: string[];
+    zeilen: Zeile[];
     mindesthoehe: number;
 }
 
@@ -314,15 +326,19 @@ class Setzer {
     }
 
     /** Text der Eintragungen umbrechen. */
-    private umbrich(text: string | undefined, breite: number, groesse = this.schrift): string[] {
+    private umbrich(text: string | undefined, breite: number, groesse = this.schrift): Zeile[] {
         this.pdf.setFont("helvetica", "normal");
         this.pdf.setFontSize(groesse);
-        return umbrechen(this.pdf, text ?? "", breite);
+        return umbrechenMitTabs(this.pdf, text ?? "", breite, TABSTOPP * groesse / 10);
     }
 
-    /** Mehrere Zeilen ab der Grundlinie `y` setzen. */
-    private zeilen(zeilen: readonly string[], x: number, y: number): void {
-        zeilen.forEach((zeile, index) => this.text(zeile, x, y + index * this.zeile, this.schrift));
+    /** Mehrere Zeilen ab der Grundlinie `y` setzen, jedes Stück an seinem Tabstopp. */
+    private zeilen(zeilen: readonly Zeile[], x: number, y: number): void {
+        zeilen.forEach((zeile, index) => {
+            for (const stueck of zeile) {
+                this.text(stueck.text, x + stueck.x, y + index * this.zeile, this.schrift);
+            }
+        });
     }
 
     /**
