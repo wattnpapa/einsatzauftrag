@@ -54,7 +54,7 @@ Inhalt der Aufträge (liegt beim Nutzer, siehe 3.1):
 
 | Feld | Mögliche personenbezogene Daten | Betroffene |
 | --- | --- | --- |
-| Absender, Empfänger, Unterschrift, Dienststelle, abgesandt von | Namen, Funktionen, Funkrufnamen | Einsatzkräfte, Führungskräfte |
+| Absender, Empfänger, Unterschrift, Dienststellung, abgesandt von | Namen, Funktionen, Funkrufnamen | Einsatzkräfte, Führungskräfte |
 | Einsatz, lfd. Nr., Ort/Datum | Einsatzort, Zeitpunkt | Einsatzkräfte, Anwohner |
 | 1a Gefahren- und Schadenlage | Adressen, Schadensorte, Angaben zu Betroffenen des Schadens | Anwohner, Verletzte |
 | 1b, 1c, 3a bis 3c | Kräfte, Einsatzbereiche, Absichten | Einsatzkräfte |
