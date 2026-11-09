@@ -138,7 +138,7 @@ const ABSCHLUSS_OBEN_MIN = 13.5;
 const ABSCHLUSS_UNTEN_MIN = 9.7;
 /** Spalten der Zeile „Abgesandt“: Beginn von „am/um“, „von“, „Unterschrift:“. */
 const ABGESANDT_SPALTEN = [28.4 * QUER, 87.6 * QUER, 136.1 * QUER] as const;
-/** Beginn von „Ort, Datum“, „Unterschrift“ und „Dienststelle“. */
+/** Beginn von „Ort, Datum“, „Unterschrift“ und „Dienststellung“. */
 const ABSCHLUSS_SPALTEN = [9 * QUER, 66 * QUER, 139 * QUER] as const;
 
 const GELB = "#ffffa6";
@@ -619,7 +619,7 @@ class Setzer {
         this.linie(LINKS, oben, LINKS, unten);
         this.linie(RECHTS, oben, RECHTS, unten);
 
-        ["Ort, Datum", "Unterschrift", "Dienststelle"].forEach((beschriftung, index) => {
+        ["Ort, Datum", "Unterschrift", "Dienststellung"].forEach((beschriftung, index) => {
             const x = spalten[index] as number;
             this.text(beschriftung, x, oben + beschriftungY, 9);
             this.zeilen(felder[index] ?? [], x, oben + wertOben + oberlaenge(this.schrift));

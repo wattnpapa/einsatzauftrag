@@ -321,7 +321,7 @@ function baueMaske(): void {
     reihe.appendChild(knopf("Heute", "heute", "Datum von heute hinter den Ort setzen"));
     reihe = zeile(ende);
     eingabe(reihe, "unterschrift", "Unterschrift (Name, optional)", "input");
-    eingabe(reihe, "dienststelle", "Dienststelle", "input");
+    eingabe(reihe, "dienststelle", "Dienststellung", "input");
     reihe = zeile(ende);
     eingabe(reihe, "abgesandtAm", "Abgesandt am", "input", "schmal");
     eingabe(reihe, "abgesandtUm", "um", "input", "schmal");

@@ -89,7 +89,7 @@ export const FELDER: readonly Feld[] = [
     },
     { schluessel: "ortDatum", titel: "Ort, Datum", beschreibung: "Ort und Datum der Unterschrift.", beispiel: "Oldenburg, 27.10.2026", auch: ["Ort Datum", "Ort"], breite: 20 },
     { schluessel: "unterschrift", titel: "Unterschrift", beschreibung: "Name in Druckschrift, falls gewünscht; unterschrieben wird von Hand.", beispiel: "Mustermann", breite: 16 },
-    { schluessel: "dienststelle", titel: "Dienststelle", beschreibung: "Dienststelle oder Funktion der unterschreibenden Person.", beispiel: "ZTr TZ", breite: 16 },
+    { schluessel: "dienststelle", titel: "Dienststellung", beschreibung: "Dienststellung oder Funktion der unterschreibenden Person.", beispiel: "ZTr TZ", auch: ["Dienststelle"], breite: 16 },
     { schluessel: "abgesandtAm", titel: "Abgesandt am", beschreibung: "Datum der Absendung.", beispiel: "27.10.", breite: 12 },
     { schluessel: "abgesandtUm", titel: "Abgesandt um", beschreibung: "Uhrzeit der Absendung.", beispiel: "13:45", breite: 12 },
     { schluessel: "abgesandtVon", titel: "Abgesandt von", beschreibung: "Wer den Auftrag abgesandt hat.", beispiel: "Fm Muster", breite: 16 }

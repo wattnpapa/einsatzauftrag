@@ -28,7 +28,7 @@ describe("setzeEinsatzauftrag", () => {
         const alle = texte(ergebnis.seiten[0]);
         expect(alle).toEqual(expect.arrayContaining([
             "Fb Fü 3", "Einsatzauftrag", "Technisches", "Hilfswerk", "Absender", "für den Einsatz", "lfd. Nr.:",
-            "Empfänger", "Ort, Datum", "Dienststelle", "Abgesandt", "Unterschrift:", "Seite 1 von 1"
+            "Empfänger", "Ort, Datum", "Dienststellung", "Abgesandt", "Unterschrift:", "Seite 1 von 1"
         ]));
         for (const abschnitt of ABSCHNITTE) {
             expect(alle).toContain(`${abschnitt.nummer}. ${abschnitt.titel}`);

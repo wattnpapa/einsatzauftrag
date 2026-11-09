@@ -30,6 +30,7 @@ export interface EinsatzauftragDaten {
     fuehrung?: string | readonly string[];
     ortDatum?: string;
     unterschrift?: string;
+    /** „Dienststellung“ der unterschreibenden Person, z. B. „SB AF“. */
     dienststelle?: string;
     abgesandtAm?: string;
     abgesandtUm?: string;
