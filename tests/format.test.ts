@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { describe, expect, it } from "vitest";
-import { bloecke, FARBEN, hatAuszeichnung, laeufe, ohneAuszeichnung, umbrechenLaeufe } from "../src/format.js";
+import { bloecke, hatAuszeichnung, laeufe, ohneAuszeichnung, umbrechenLaeufe } from "../src/format.js";
 import { setzeEinsatzauftrag, type Element } from "../src/index.js";
 
 type Text = Extract<Element, { art: "text" }>;
@@ -10,22 +10,28 @@ function neuePdf(): jsPDF {
     return new jsPDF({ unit: "mm", format: "a4", compress: false });
 }
 
+const L = (text: string, stil: Partial<{ fett: boolean; kursiv: boolean; durch: boolean }> = {}) =>
+    ({ text, fett: false, kursiv: false, durch: false, ...stil });
+
 describe("laeufe", () => {
-    it("erkennt fett, durchgestrichen und Farben, auch ineinander", () => {
-        expect(laeufe("a **b [rot]c[/rot]** ~~d~~")).toEqual([
-            { text: "a ", fett: false, durch: false, farbe: "#000000" },
-            { text: "b ", fett: true, durch: false, farbe: "#000000" },
-            { text: "c", fett: true, durch: false, farbe: FARBEN["rot"] },
-            { text: " ", fett: false, durch: false, farbe: "#000000" },
-            { text: "d", fett: false, durch: true, farbe: "#000000" }
+    it("liest Markdown: fett, kursiv, beides und durchgestrichen, auch ineinander", () => {
+        expect(laeufe("a **b *c*** ~~d~~ __e__ _f_ ***g***")).toEqual([
+            L("a "), L("b ", { fett: true }), L("c", { fett: true, kursiv: true }), L(" "), L("d", { durch: true }),
+            L(" "), L("e", { fett: true }), L(" "), L("f", { kursiv: true }), L(" "), L("g", { fett: true, kursiv: true })
         ]);
-        expect(laeufe("[Grün]ok[/grün]")[0]?.farbe).toBe(FARBEN["gruen"]);
     });
 
-    it("lässt Zeichen ohne Gegenstück stehen", () => {
-        expect(ohneAuszeichnung("2 ** 3 und [rot]offen ~~")).toBe("2 ** 3 und [rot]offen ~~");
-        expect(hatAuszeichnung("5 * 3 = 15")).toBe(false);
-        expect(ohneAuszeichnung("**a**\n[blau]b[/blau]")).toBe("a\nb");
+    it("lässt stehen, was in Markdown keine Auszeichnung ist", () => {
+        for (const text of ["5 * 3 * 2 = 30", "2 ** 3 und offen ~~", "TMO 304_OL_THW", "snake_case_name", "** nicht fett **"]) {
+            expect(hatAuszeichnung(text)).toBe(false);
+            expect(ohneAuszeichnung(text)).toBe(text);
+        }
+    });
+
+    it("nimmt maskierte Zeichen wörtlich", () => {
+        expect(laeufe("\\*kein\\* kursiv, a\\|b, C:\\temp")).toEqual([L("*kein* kursiv, a|b, C:\\temp")]);
+        expect(hatAuszeichnung("\\*")).toBe(true);
+        expect(ohneAuszeichnung("**a**\n*b*")).toBe("a\nb");
     });
 });
 
@@ -38,6 +44,7 @@ describe("bloecke", () => {
         ]);
         expect(bloecke("| A | B |", false)).toEqual([{ art: "absatz", text: "| A | B |" }]);
         expect(bloecke("  \n ", true)).toEqual([]);
+        expect(bloecke("| a \\| b | c |", true)).toEqual([{ art: "tabelle", zeilen: [["a \\| b", "c"]], kopfzeilen: 0 }]);
     });
 });
 
@@ -55,21 +62,21 @@ describe("umbrechenLaeufe", () => {
 });
 
 describe("Satz mit Auszeichnungen", () => {
-    it("setzt fette, farbige und durchgestrichene Stücke nebeneinander", () => {
-        const satz = setzeEinsatzauftrag(neuePdf(), { auftrag: "Deich **sofort** sichern, [rot]Achtung[/rot] ~~Sandsäcke~~" });
+    it("setzt fette, kursive und durchgestrichene Stücke nebeneinander", () => {
+        const satz = setzeEinsatzauftrag(neuePdf(), { auftrag: "Deich **sofort** sichern, *Achtung* ~~Sandsäcke~~" });
         const elemente = satz.seiten[0]?.elemente ?? [];
         const texte = elemente.filter((e): e is Text => e.art === "text");
         const fett = texte.find(e => e.text === "sofort");
-        const rot = texte.find(e => e.text === "Achtung");
+        const kursiv = texte.find(e => e.text === "Achtung");
         const durch = texte.find(e => e.text === "Sandsäcke");
         expect(fett?.fett).toBe(true);
-        expect(rot?.farbe).toBe(FARBEN["rot"]);
+        expect(kursiv?.kursiv).toBe(true);
+        expect(texte.find(e => e.text === "Deich")?.kursiv).toBeUndefined();
         // Leerzeichen stehen nicht am Rand der Stücke, sondern als Abstand dazwischen.
         const anfang = texte.find(e => e.text === "Deich");
         expect(fett?.x).toBeGreaterThan((anfang?.x ?? 0) + (anfang?.breite ?? 0) + 0.5);
         expect(texte.filter(e => e.y === fett?.y).every(e => e.text === e.text.trim())).toBe(true);
-        const strich = elemente.find((e): e is Linie => e.art === "linie" && e.farbe !== undefined);
-        expect(strich?.x1).toBeCloseTo(durch?.x ?? 0, 6);
+        const strich = elemente.find((e): e is Linie => e.art === "linie" && Math.abs(e.x1 - (durch?.x ?? -1)) < 1e-6);
         expect(strich?.x2).toBeCloseTo((durch?.x ?? 0) + (durch?.breite ?? 0), 6);
         expect(strich?.y1).toBeLessThan(durch?.y ?? 0);
     });

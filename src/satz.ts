@@ -1,6 +1,6 @@
 import type { jsPDF } from "jspdf";
 import { ABSCHNITTE, type Abschnitt, type EinsatzauftragDaten } from "./daten.js";
-import { bloecke, GRUNDSTIL, hatAuszeichnung, laeufe, umbrechenLaeufe, type Lauf } from "./format.js";
+import { bloecke, GRUNDSTIL, hatAuszeichnung, laeufe, schnitt, umbrechenLaeufe, type Lauf } from "./format.js";
 import { fuerPdf, kuerzeAufBreite, trenneLangeWoerter } from "./text.js";
 
 // Satz des Einsatzauftrags: rechnet aus, was wohin kommt, und legt es als
@@ -16,16 +16,8 @@ import { fuerPdf, kuerzeAufBreite, trenneLangeWoerter } from "./text.js";
 export type Element =
     /** Gefüllte Fläche ohne Rand. */
     | { readonly art: "flaeche"; readonly x: number; readonly y: number; readonly b: number; readonly h: number; readonly farbe: string }
-    /** Gerade Linie, Stärke in mm, ohne Farbe schwarz. */
-    | {
-        readonly art: "linie";
-        readonly x1: number;
-        readonly y1: number;
-        readonly x2: number;
-        readonly y2: number;
-        readonly staerke: number;
-        readonly farbe?: string;
-    }
+    /** Gerade Linie, Stärke in mm. */
+    | { readonly art: "linie"; readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number; readonly staerke: number }
     /**
      * Text in Helvetica. `x`/`y` ist der Ankerpunkt auf der Grundlinie,
      * `groesse` in pt, `breite` die in der PDF gemessene Breite in mm.
@@ -37,6 +29,8 @@ export type Element =
         readonly y: number;
         readonly groesse: number;
         readonly fett: boolean;
+        /** Nur vorhanden, wenn kursiv. */
+        readonly kursiv?: true;
         readonly farbe: string;
         readonly ausrichtung: "links" | "mitte" | "rechts";
         readonly breite: number;
@@ -302,15 +296,19 @@ class Setzer {
 
     private text(text: string, x: number, y: number, groesse: number, {
         fett = false,
+        kursiv = false,
         farbe = SCHWARZ,
         ausrichtung = "links"
-    }: { fett?: boolean; farbe?: string; ausrichtung?: "links" | "mitte" | "rechts" } = {}): void {
+    }: { fett?: boolean; kursiv?: boolean; farbe?: string; ausrichtung?: "links" | "mitte" | "rechts" } = {}): void {
         if (!text) {
             return;
         }
-        this.pdf.setFont("helvetica", fett ? "bold" : "normal");
+        this.pdf.setFont("helvetica", schnitt({ fett, kursiv, durch: false }));
         this.pdf.setFontSize(groesse);
-        this.elemente.push({ art: "text", text, x, y, groesse, fett, farbe, ausrichtung, breite: this.pdf.getTextWidth(text) });
+        const breite = this.pdf.getTextWidth(text);
+        this.elemente.push(kursiv
+            ? { art: "text", text, x, y, groesse, fett, kursiv, farbe, ausrichtung, breite }
+            : { art: "text", text, x, y, groesse, fett, farbe, ausrichtung, breite });
     }
 
     /** „ÜBUNG“ diagonal über die Mitte des Formulars, auf jeder Seite gleich. */
@@ -339,8 +337,8 @@ class Setzer {
     }
 
     /**
-     * Text der Eintragungen umbrechen, mit Auszeichnungen (fett,
-     * durchgestrichen, farbig) und, wenn `tabellen`, mit Tabellen.
+     * Text der Eintragungen umbrechen, mit Markdown-Auszeichnungen (fett,
+     * kursiv, durchgestrichen) und, wenn `tabellen`, mit Tabellen.
      */
     private umbrich(text: string | undefined, breite: number, tabellen = false): Satzzeile[] {
         const ergebnis: Satzzeile[] = [];
@@ -372,7 +370,7 @@ class Setzer {
         };
     }
 
-    /** Läufe nebeneinander ab `x` auf der Grundlinie `y`; durchgestrichene mit Strich in ihrer Farbe. */
+    /** Läufe nebeneinander ab `x` auf der Grundlinie `y`; durchgestrichene mit Strich. */
     private laeufe(zeile: readonly Lauf[], x: number, y: number, groesse = this.schrift): void {
         // Eine schlichte Zeile geht unverändert hinaus. Sonst stehen die Stücke
         // ohne Leerzeichen am Rand an ihrer Stelle: Eine Vorschau, die Leerraum
@@ -380,16 +378,16 @@ class Setzer {
         const schlicht = zeile.length === 1 && !(zeile[0] as Lauf).durch;
         let links = x;
         for (const lauf of zeile) {
-            this.pdf.setFont("helvetica", lauf.fett ? "bold" : "normal");
+            this.pdf.setFont("helvetica", schnitt(lauf));
             this.pdf.setFontSize(groesse);
             const breite = this.pdf.getTextWidth(lauf.text);
             const kern = schlicht ? lauf.text : lauf.text.trim();
             const vorne = schlicht ? 0 : this.pdf.getTextWidth(lauf.text.slice(0, lauf.text.length - lauf.text.trimStart().length));
-            this.text(kern, links + vorne, y, groesse, { fett: lauf.fett, farbe: lauf.farbe });
+            this.text(kern, links + vorne, y, groesse, { fett: lauf.fett, kursiv: lauf.kursiv });
             if (lauf.durch && kern) {
                 const hoehe = y - groesse * PT * 0.3;
                 const ende = links + vorne + this.pdf.getTextWidth(kern);
-                this.elemente.push({ art: "linie", x1: links + vorne, y1: hoehe, x2: ende, y2: hoehe, staerke: groesse * PT * 0.07, farbe: lauf.farbe });
+                this.elemente.push({ art: "linie", x1: links + vorne, y1: hoehe, x2: ende, y2: hoehe, staerke: groesse * PT * 0.07 });
             }
             links += breite;
         }
@@ -406,7 +404,7 @@ class Setzer {
             laeufe(zeile[spalte] ?? "", { ...GRUNDSTIL, fett: index < kopfzeilen })));
         const natuerlich = Array.from({ length: spalten }, (_, spalte) => Math.max(TABELLE_SPALTE_MIN, ...inhalt.map(zeile =>
             (zeile[spalte] ?? []).reduce((summe, lauf) => {
-                this.pdf.setFont("helvetica", lauf.fett ? "bold" : "normal");
+                this.pdf.setFont("helvetica", schnitt(lauf));
                 this.pdf.setFontSize(this.schrift);
                 return summe + this.pdf.getTextWidth(lauf.text.replace(/\s+/g, " "));
             }, 0) + 2 * TABELLE_RAND)));

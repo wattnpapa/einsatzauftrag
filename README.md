@@ -45,15 +45,19 @@ console.log(satz.seiten.length, satz.schriftgroesse);
 pdf.save("einsatzauftrag.pdf");
 ```
 
-In den Abschnitten 1 bis 5, im Absender, Einsatz, Empfänger und in den Feldern der Unterschriftszeile lässt sich Text auszeichnen. Der Text bleibt dabei reiner Text, so dass er unverändert durch Excel, CSV, Links und die Metadaten der PDF geht:
+Text in den Eintragungen lässt sich mit Markdown auszeichnen, so wie auf GitHub. Der Text bleibt dabei reiner Text und geht unverändert durch Excel, CSV, Links und die Metadaten der PDF:
 
 | Eingabe | Ergebnis |
 | --- | --- |
-| `**sofort**` | fett |
+| `**sofort**` oder `__sofort__` | fett |
+| `*Achtung*` oder `_Achtung_` | kursiv |
+| `***Achtung***` | fett und kursiv |
 | `~~Feuerwehrhaus~~` | durchgestrichen |
-| `[rot]Achtung[/rot]` | farbig; auch `blau`, `grün` (`gruen`) und `orange` |
+| `\*`, `\_`, `\~`, `\|`, `\\` | das Zeichen selbst |
 
-Auszeichnungen dürfen ineinander stecken, reichen aber nicht über ein Zeilenende. Ein Zeichen ohne Gegenstück bleibt stehen, wie es ist. In den Abschnitten 1 bis 5 werden Zeilen, die mit `|` beginnen, zu einer Tabelle; eine Zeile aus Strichen macht die Zeilen darüber zum grau hinterlegten, fetten Kopf. Die Spalten sind so breit wie ihr Inhalt, reicht der Platz nicht, bricht der Text in der Zelle um. Eine Tabelle darf über eine Seite hinausgehen, geteilt wird nur zwischen ihren Zeilen.
+Wie in Markdown beginnt eine Auszeichnung nicht vor und endet nicht nach einem Leerzeichen („5 * 3 * 2“ bleibt stehen), und Unterstriche mitten im Wort wirken nicht („304_OL_THW“ bleibt stehen). Auszeichnungen dürfen ineinander stecken, reichen aber nicht über ein Zeilenende. Farben gibt es in Markdown nicht und deshalb auch hier nicht.
+
+In den Abschnitten 1 bis 5 werden Zeilen, die mit `|` beginnen, zu einer Tabelle. Eine Zeile aus Strichen macht die Zeilen darüber zum grau hinterlegten, fetten Kopf; anders als auf GitHub geht es auch ohne. Die Spalten sind so breit wie ihr Inhalt, reicht der Platz nicht, bricht der Text in der Zelle um. Eine Tabelle darf über eine Seite hinausgehen, geteilt wird nur zwischen ihren Zeilen.
 
 ```text
 Kräfte im Bereitstellungsraum:
@@ -63,7 +67,7 @@ Kräfte im Bereitstellungsraum:
 | MTW | ~~Heros Oldenburg 21/19~~ 21/20 |
 ```
 
-In der Web-App erscheint unter dem Textfeld, in dem man gerade schreibt, eine Leiste mit Knöpfen für fett, durchgestrichen, vier Farben und eine Tabelle; Strg+B macht fett. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle, die erste Zeile zum Kopf.
+In der Web-App erscheint unter dem Textfeld, in dem man gerade schreibt, eine Leiste mit Knöpfen für fett, kursiv, durchgestrichen und eine Tabelle; Strg+B und Strg+I gehen auch. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle, die erste Zeile zum Kopf.
 
 In `fuehrung` (Abschnitt 5) beginnt eine Leerzeile eine neue Formularzeile. Sollen Leerzeilen innerhalb einer Formularzeile stehen bleiben, die Zeilen als Liste übergeben: `fuehrung: ["Erreichbarkeiten:\n\nFüSt Rostock", "Führungsstelle Südtor 8"]`.
 

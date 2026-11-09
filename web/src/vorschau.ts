@@ -37,7 +37,7 @@ export function seiteAlsSvg(seite: Seite, beschriftung: string): SVGSVGElement {
                 break;
             case "linie":
                 svg.appendChild(element("line", {
-                    x1: teil.x1, y1: teil.y1, x2: teil.x2, y2: teil.y2, stroke: teil.farbe ?? "#000000", "stroke-width": teil.staerke
+                    x1: teil.x1, y1: teil.y1, x2: teil.x2, y2: teil.y2, stroke: "#000000", "stroke-width": teil.staerke
                 }));
                 break;
             case "text": {
@@ -47,6 +47,7 @@ export function seiteAlsSvg(seite: Seite, beschriftung: string): SVGSVGElement {
                     "font-size": teil.groesse * PT,
                     "font-family": "Helvetica, Arial, 'Liberation Sans', sans-serif",
                     "font-weight": teil.fett ? 700 : 400,
+                    "font-style": teil.kursiv ? "italic" : "normal",
                     fill: teil.farbe,
                     "text-anchor": teil.ausrichtung === "links" ? "start" : teil.ausrichtung === "mitte" ? "middle" : "end"
                 });

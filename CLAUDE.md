@@ -24,8 +24,9 @@ npm run web:build    # Web-App → dist-web/, GitHub Pages
 - Ziel ist eine A4-Seite: automatische Schrift 10–8 pt, dann Fortsetzungsseiten.
   Text wird nie abgeschnitten, nur einzeilige Felder (am, um, von, lfd. Nr.) kürzen mit „…“.
 - `jspdf` bleibt Peer-Abhängigkeit, keine Laufzeit-Abhängigkeiten dazunehmen.
-- Auszeichnungen (`**fett**`, `~~durch~~`, `[rot]…[/rot]`, Tabellen mit `|`) liest
-  `src/format.ts`; der Text bleibt reiner Text. Text ohne Auszeichnung wird genau wie
+- Auszeichnungen in Markdown wie auf GitHub (`**fett**`, `*kursiv*`, `~~durch~~`,
+  Tabellen mit `|`, `\` maskiert) liest `src/format.ts`; der Text bleibt reiner Text.
+  Keine eigene Schreibweise außerhalb von Markdown (deshalb keine Farben). Text ohne Auszeichnung wird genau wie
   vorher gesetzt (jsPDF-Umbruch), das soll so bleiben.
 - Die Zeichenreihenfolge ist festgeschrieben: gleiche Eingabe, gleiche PDF.
 - Kein THW-Zeichen im Repository; Logos bringt der Nutzer selbst mit.

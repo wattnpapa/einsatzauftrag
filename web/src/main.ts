@@ -5,7 +5,7 @@ import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type Einsatza
 import { datenAusFragment, dekodiereWerte, istPdf, kodiereWerte, LANGER_LINK, leseAusPdf, linkMitDaten, tausender } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
 import { auftragKopieren, FELDER, fuehrungText, fuehrungZeilen, hatInhalt, istJa, leseTabelle, naechsterAuftrag, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
-import { aenderung, auszeichnen, DURCH, farbe, FETT, tabelleAusTabulatoren, tabelleEinfuegen, type Auswahl } from "./format.js";
+import { aenderung, auszeichnen, DURCH, FETT, KURSIV, tabelleAusTabulatoren, tabelleEinfuegen, type Auswahl } from "./format.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -469,11 +469,8 @@ function baueFormatleiste(): HTMLElement {
     leiste.setAttribute("aria-label", "Text formatieren");
     const aktionen: [string, string, string, (auswahl: Auswahl) => Auswahl][] = [
         ["F", "Fett (Strg+B)", "fett", auswahl => auszeichnen(auswahl, FETT)],
+        ["K", "Kursiv (Strg+I)", "kursiv", auswahl => auszeichnen(auswahl, KURSIV)],
         ["S", "Durchgestrichen", "durch", auswahl => auszeichnen(auswahl, DURCH)],
-        ["", "Rot", "farbe rot", auswahl => auszeichnen(auswahl, farbe("rot"))],
-        ["", "Blau", "farbe blau", auswahl => auszeichnen(auswahl, farbe("blau"))],
-        ["", "Grün", "farbe gruen", auswahl => auszeichnen(auswahl, farbe("grün"))],
-        ["", "Orange", "farbe orange", auswahl => auszeichnen(auswahl, farbe("orange"))],
         ["Tabelle", "Tabelle einfügen; markierter Text aus Excel wird zur Tabelle", "tabelle", auswahl => tabelleEinfuegen(auswahl)]
     ];
     for (const [text, beschreibung, klasse, aktion] of aktionen) {
@@ -494,7 +491,7 @@ function baueFormatleiste(): HTMLElement {
     }
     const hinweis = document.createElement("p");
     hinweis.className = "hinweis formatleiste-hinweis";
-    hinweis.textContent = "Im Feld steht **fett**, ~~durchgestrichen~~, [rot]farbig[/rot]; Tabellenzeilen beginnen mit „|“. Die Vorschau zeigt das Ergebnis. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle.";
+    hinweis.textContent = "Markdown: **fett**, *kursiv*, ~~durchgestrichen~~, Tabellenzeilen beginnen mit „|“. Die Vorschau zeigt das Ergebnis. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle.";
     leiste.appendChild(hinweis);
     return leiste;
 }
@@ -510,9 +507,13 @@ maske.addEventListener("focusin", ereignis => {
 });
 
 maske.addEventListener("keydown", ereignis => {
-    if (formatierbar(ereignis.target) && (ereignis.ctrlKey || ereignis.metaKey) && !ereignis.altKey && ereignis.key.toLowerCase() === "b") {
+    if (!formatierbar(ereignis.target) || !(ereignis.ctrlKey || ereignis.metaKey) || ereignis.altKey || ereignis.shiftKey) {
+        return;
+    }
+    const art = { b: FETT, i: KURSIV }[ereignis.key.toLowerCase()];
+    if (art) {
         ereignis.preventDefault();
-        uebernimm(ereignis.target, auszeichnen(auswahlVon(ereignis.target), FETT));
+        uebernimm(ereignis.target, auszeichnen(auswahlVon(ereignis.target), art));
     }
 });
 

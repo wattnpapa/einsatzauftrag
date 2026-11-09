@@ -40,7 +40,7 @@ const formatiert = {
         ...typisch.unterpunkte,
         "1b": "Kräfte im Bereitstellungsraum:\n| Fahrzeug | Funkrufname | Stärke |\n| --- | --- | --- |\n| GKW I | Heros Oldenburg 21/52 | 0/1/8/**9** |\n| MzKW | Heros Oldenburg 21/53 | 0/1/5/**6** |\n| MTW | ~~Heros Oldenburg 21/19~~ 21/20 | 0/0/3/**3** |"
     },
-    auftrag: "Deichabschnitt km 4,2 bis 4,6 **gegen Durchsickern sichern** und bis auf Weiteres überwachen. [rot]Deichkrone nicht mit Fahrzeugen befahren.[/rot] Treffpunkt ~~Feuerwehrhaus~~ [blau]Gemeindehaus Tungeln[/blau]."
+    auftrag: "Deichabschnitt km 4,2 bis 4,6 **gegen Durchsickern sichern** und bis auf Weiteres überwachen. ***Deichkrone nicht mit Fahrzeugen befahren.*** Treffpunkt ~~Feuerwehrhaus~~ *Gemeindehaus Tungeln*."
 };
 
 mkdirSync("ausgabe", { recursive: true });

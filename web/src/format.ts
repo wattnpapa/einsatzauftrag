@@ -1,5 +1,6 @@
-// Formatieren in den Textfeldern der Maske: setzt die Auszeichnungen der
-// Bibliothek (src/format.ts) um die Auswahl, ohne DOM, damit es testbar bleibt.
+// Formatieren in den Textfeldern der Maske: setzt Markdown, wie es die
+// Bibliothek liest (src/format.ts), um die Auswahl. Ohne DOM, damit es
+// testbar bleibt.
 
 export interface Auswahl {
     readonly wert: string;
@@ -15,10 +16,26 @@ export interface Auszeichnung {
 }
 
 export const FETT: Auszeichnung = { vor: "**", nach: "**", platzhalter: "fett" };
+export const KURSIV: Auszeichnung = { vor: "*", nach: "*", platzhalter: "kursiv" };
 export const DURCH: Auszeichnung = { vor: "~~", nach: "~~", platzhalter: "durchgestrichen" };
 
-export function farbe(name: "rot" | "blau" | "grün" | "orange"): Auszeichnung {
-    return { vor: `[${name}]`, nach: `[/${name}]`, platzhalter: name === "grün" ? "grün" : name };
+/** Wie viele Sterne direkt am Ende von `links` und am Anfang von `rechts` stehen, das Kleinere. */
+function sterne(links: string, rechts: string): number {
+    const vorne = /\**$/.exec(links)?.[0].length ?? 0;
+    const hinten = /^\**/.exec(rechts)?.[0].length ?? 0;
+    return Math.min(vorne, hinten);
+}
+
+/**
+ * Ob `vor`/`nach` schon um den Text stehen. Bei Sternen zählt die Anzahl:
+ * „*“ (kursiv) steckt in 1 und 3 Sternen, „**“ (fett) in 2 und 3.
+ */
+function umschlossen(links: string, rechts: string, vor: string, nach: string): boolean {
+    if (vor === "*" || vor === "**") {
+        const anzahl = sterne(links, rechts);
+        return vor === "*" ? anzahl === 1 || anzahl === 3 : anzahl >= 2;
+    }
+    return links.endsWith(vor) && rechts.startsWith(nach);
 }
 
 /**
@@ -36,10 +53,11 @@ export function auszeichnen(auswahl: Auswahl, { vor, nach, platzhalter }: Auszei
         return { wert: `${davor}${vor}${platzhalter}${nach}${danach}`, start: start + vor.length, ende: start + vor.length + platzhalter.length };
     }
     // Schon ausgezeichnet: außen um die Auswahl oder als Teil von ihr.
-    if (davor.endsWith(vor) && danach.startsWith(nach)) {
+    if (umschlossen(davor, danach, vor, nach)) {
         return { wert: `${davor.slice(0, -vor.length)}${markiert}${danach.slice(nach.length)}`, start: start - vor.length, ende: ende - vor.length };
     }
-    if (markiert.length >= vor.length + nach.length && markiert.startsWith(vor) && markiert.endsWith(nach)) {
+    if (markiert.length > vor.length + nach.length && umschlossen(markiert, markiert, vor, nach)
+        && markiert.startsWith(vor) && markiert.endsWith(nach)) {
         const innen = markiert.slice(vor.length, markiert.length - nach.length);
         return { wert: `${davor}${innen}${danach}`, start, ende: start + innen.length };
     }
@@ -51,9 +69,9 @@ export function auszeichnen(auswahl: Auswahl, { vor, nach, platzhalter }: Auszei
     return { wert: `${davor}${neu}${danach}`, start, ende: start + neu.length };
 }
 
-/** Zellen als Tabellenzeile; „|“ in einer Zelle würde sie teilen und wird zu „/“. */
+/** Zellen als Tabellenzeile; „|“ in einer Zelle wird wie in Markdown zu „\\|“. */
 function tabellenzeile(zellen: readonly string[]): string {
-    return `| ${zellen.map(zelle => zelle.replace(/\|/g, "/").replace(/\s+/g, " ").trim()).join(" | ")} |`;
+    return `| ${zellen.map(zelle => zelle.replace(/\s+/g, " ").trim().replace(/\|/g, "\\|")).join(" | ")} |`;
 }
 
 /**

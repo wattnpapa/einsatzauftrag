@@ -52,7 +52,7 @@ export async function erzeugeVorlage(): Promise<Blob> {
     ];
     anleitung.getRow(1).font = { bold: true };
     anleitung.addRow({ titel: `Jede Zeile im Blatt „${BLATT}“ ergibt einen Einsatzauftrag. Leere Zeilen werden übersprungen, leere Zellen bleiben im Vordruck leer. Zeilenumbrüche in einer Zelle (Alt+Eingabe) bleiben erhalten. Das Blatt „Beispiel“ wird nur gelesen, wenn es das einzige ausgefüllte ist.` });
-    anleitung.addRow({ titel: "In Lage, Auftrag, Durchführung, Logistik sowie Führung und Verbindung lässt sich Text auszeichnen: **fett**, ~~durchgestrichen~~, [rot]farbig[/rot] (auch blau, grün, orange). Zeilen in der Zelle, die mit „|“ beginnen, werden eine Tabelle, z. B. „| Fahrzeug | Funkrufname |“; eine Zeile „| --- | --- |“ darunter macht die erste zum Kopf." });
+    anleitung.addRow({ titel: "In Lage, Auftrag, Durchführung, Logistik sowie Führung und Verbindung lässt sich Text mit Markdown auszeichnen: **fett**, *kursiv*, ~~durchgestrichen~~. Zeilen in der Zelle, die mit „|“ beginnen, werden eine Tabelle, z. B. „| Fahrzeug | Funkrufname |“; eine Zeile „| --- | --- |“ darunter macht die erste zum Kopf." });
     anleitung.addRow({});
     for (const feld of FELDER) {
         anleitung.addRow({ titel: feld.titel, beschreibung: feld.beschreibung, beispiel: feld.beispiel });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aenderung, auszeichnen, DURCH, farbe, FETT, tabelleAusTabulatoren, tabelleEinfuegen } from "../../web/src/format.js";
+import { aenderung, auszeichnen, DURCH, FETT, KURSIV, tabelleAusTabulatoren, tabelleEinfuegen } from "../../web/src/format.js";
 
 describe("auszeichnen", () => {
     it("setzt die Auszeichnung um die Auswahl und lässt Leerraum draußen", () => {
@@ -13,9 +13,16 @@ describe("auszeichnen", () => {
     });
 
     it("fügt ohne Auswahl einen ausgewählten Platzhalter ein", () => {
-        const ergebnis = auszeichnen({ wert: "ab", start: 1, ende: 1 }, farbe("rot"));
-        expect(ergebnis.wert).toBe("a[rot]rot[/rot]b");
-        expect(ergebnis.wert.slice(ergebnis.start, ergebnis.ende)).toBe("rot");
+        const ergebnis = auszeichnen({ wert: "ab", start: 1, ende: 1 }, KURSIV);
+        expect(ergebnis.wert).toBe("a*kursiv*b");
+        expect(ergebnis.wert.slice(ergebnis.start, ergebnis.ende)).toBe("kursiv");
+    });
+
+    it("unterscheidet kursiv und fett an der Zahl der Sterne", () => {
+        expect(auszeichnen({ wert: "**b**", start: 2, ende: 3 }, KURSIV).wert).toBe("***b***");
+        expect(auszeichnen({ wert: "***b***", start: 3, ende: 4 }, KURSIV).wert).toBe("**b**");
+        expect(auszeichnen({ wert: "***b***", start: 3, ende: 4 }, FETT).wert).toBe("*b*");
+        expect(auszeichnen({ wert: "*b*", start: 1, ende: 2 }, FETT).wert).toBe("***b***");
     });
 
     it("zeichnet über mehrere Zeilen jede Zeile einzeln aus", () => {
@@ -28,6 +35,7 @@ describe("Tabellen", () => {
         expect(tabelleAusTabulatoren("Fahrzeug\tRufname\r\nGKW\tHeros 21/52\nMTW\n")).toBe(
             "| Fahrzeug | Rufname |\n| --- | --- |\n| GKW | Heros 21/52 |\n| MTW |  |");
         expect(tabelleAusTabulatoren("kein | Tab")).toBeUndefined();
+        expect(tabelleAusTabulatoren("a|b\tc\n1\t2")).toBe("| a\\|b | c |\n| --- | --- |\n| 1 | 2 |");
     });
 
     it("fügt die Tabelle auf eigenen Zeilen ein", () => {
