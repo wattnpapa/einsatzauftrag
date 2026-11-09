@@ -14,7 +14,7 @@ export function zeichneSeite(pdf: jsPDF, seite: Seite): void {
                 pdf.rect(element.x, element.y, element.b, element.h, "F");
                 break;
             case "linie":
-                pdf.setDrawColor(0, 0, 0);
+                pdf.setDrawColor(element.farbe ?? "#000000");
                 pdf.setLineWidth(element.staerke);
                 pdf.line(element.x1, element.y1, element.x2, element.y2);
                 break;

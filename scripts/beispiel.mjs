@@ -34,9 +34,17 @@ const lang = {
     auftrag: Array(30).fill("Deichabschnitt sichern, Sickerstellen markieren und dem Abschnittsleiter melden.").join(" "),
     unterpunkte: Object.fromEntries(Object.entries(typisch.unterpunkte).map(([k, v]) => [k, `${v}\n${v} ${v}`]))
 };
+const formatiert = {
+    ...typisch,
+    unterpunkte: {
+        ...typisch.unterpunkte,
+        "1b": "Kräfte im Bereitstellungsraum:\n| Fahrzeug | Funkrufname | Stärke |\n| --- | --- | --- |\n| GKW I | Heros Oldenburg 21/52 | 0/1/8/**9** |\n| MzKW | Heros Oldenburg 21/53 | 0/1/5/**6** |\n| MTW | ~~Heros Oldenburg 21/19~~ 21/20 | 0/0/3/**3** |"
+    },
+    auftrag: "Deichabschnitt km 4,2 bis 4,6 **gegen Durchsickern sichern** und bis auf Weiteres überwachen. [rot]Deichkrone nicht mit Fahrzeugen befahren.[/rot] Treffpunkt ~~Feuerwehrhaus~~ [blau]Gemeindehaus Tungeln[/blau]."
+};
 
 mkdirSync("ausgabe", { recursive: true });
-for (const [name, daten] of [["leer", {}], ["typisch", typisch], ["lang", lang]]) {
+for (const [name, daten] of [["leer", {}], ["typisch", typisch], ["lang", lang], ["formatiert", formatiert]]) {
     const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
     const satz = zeichneEinsatzauftrag(pdf, daten, { fusszeile: "Erstellt mit Einsatzauftrag (EUPL-1.2)" });
     writeFileSync(`ausgabe/${name}.pdf`, Buffer.from(pdf.output("arraybuffer")));

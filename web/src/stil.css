@@ -841,3 +841,16 @@ h1 { overflow-wrap: anywhere; }
 
 table.uebersicht td.mehrseitig { font-weight: 700; color: var(--warn-text); background: var(--warn-fond); }
 .weitere-zeile { margin-top: var(--r-3); }
+
+/* ---- Formatleiste ------------------------------------------------ */
+.formatleiste { display: flex; flex-wrap: wrap; gap: var(--r-1); margin-top: var(--r-1); }
+.formatleiste button { min-width: calc(var(--ziel-basis) + var(--ziel)); padding: 0.3rem 0.6rem; font-size: var(--t-m); }
+.formatleiste button.fett { font-weight: 800; }
+.formatleiste button.durch { font-weight: 500; text-decoration: line-through; }
+/* Die Farben sind die des Drucks; das Feld zeigt sie als Fläche mit Rand, auch im dunklen Modus. */
+.formatleiste button.farbe::before { content: ""; width: 1.1rem; height: 1.1rem; border: var(--strich) solid var(--linie-stark); }
+.formatleiste button.rot::before { background: #c00000; }
+.formatleiste button.blau::before { background: #0033cc; }
+.formatleiste button.gruen::before { background: #007a1f; }
+.formatleiste button.orange::before { background: #d45f00; }
+.formatleiste-hinweis { flex-basis: 100%; margin-top: 0; }

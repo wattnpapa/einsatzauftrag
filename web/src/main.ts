@@ -5,6 +5,7 @@ import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type Einsatza
 import { datenAusFragment, dekodiereWerte, istPdf, kodiereWerte, LANGER_LINK, leseAusPdf, linkMitDaten, tausender } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
 import { auftragKopieren, FELDER, fuehrungText, fuehrungZeilen, hatInhalt, istJa, leseTabelle, naechsterAuftrag, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { aenderung, auszeichnen, DURCH, farbe, FETT, tabelleAusTabulatoren, tabelleEinfuegen, type Auswahl } from "./format.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -426,6 +427,104 @@ maske.addEventListener("input", ereignis => {
     geaendert();
 });
 maske.addEventListener("submit", ereignis => ereignis.preventDefault());
+
+// ---- Formatleiste -----------------------------------------------------------------
+
+// Eine Leiste für alle großen Textfelder; sie steht unter dem zuletzt
+// betretenen Feld und bleibt dort, bis ein anderes betreten wird. So rutscht
+// beim Verlassen nichts unter dem Finger weg.
+
+let formatFeld: HTMLTextAreaElement | undefined;
+
+function formatierbar(ziel: EventTarget | null): ziel is HTMLTextAreaElement {
+    return ziel instanceof HTMLTextAreaElement && el("maske-felder").contains(ziel);
+}
+
+/** Ersetzt den Text des Feldes so, dass Rückgängig (Strg+Z) die Änderung zurücknimmt. */
+function uebernimm(feldElement: HTMLTextAreaElement, ergebnis: Auswahl): void {
+    const stueck = aenderung(feldElement.value, ergebnis.wert);
+    feldElement.focus();
+    feldElement.setSelectionRange(stueck.start, stueck.ende);
+    let eingefuegt = false;
+    try {
+        eingefuegt = document.execCommand("insertText", false, stueck.text);
+    } catch {
+        eingefuegt = false;
+    }
+    if (!eingefuegt || feldElement.value !== ergebnis.wert) {
+        feldElement.value = ergebnis.wert;
+        feldElement.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    feldElement.setSelectionRange(ergebnis.start, ergebnis.ende);
+}
+
+function auswahlVon(feldElement: HTMLTextAreaElement): Auswahl {
+    return { wert: feldElement.value, start: feldElement.selectionStart, ende: feldElement.selectionEnd };
+}
+
+function baueFormatleiste(): HTMLElement {
+    const leiste = document.createElement("div");
+    leiste.className = "formatleiste";
+    leiste.setAttribute("role", "toolbar");
+    leiste.setAttribute("aria-label", "Text formatieren");
+    const aktionen: [string, string, string, (auswahl: Auswahl) => Auswahl][] = [
+        ["F", "Fett (Strg+B)", "fett", auswahl => auszeichnen(auswahl, FETT)],
+        ["S", "Durchgestrichen", "durch", auswahl => auszeichnen(auswahl, DURCH)],
+        ["", "Rot", "farbe rot", auswahl => auszeichnen(auswahl, farbe("rot"))],
+        ["", "Blau", "farbe blau", auswahl => auszeichnen(auswahl, farbe("blau"))],
+        ["", "Grün", "farbe gruen", auswahl => auszeichnen(auswahl, farbe("grün"))],
+        ["", "Orange", "farbe orange", auswahl => auszeichnen(auswahl, farbe("orange"))],
+        ["Tabelle", "Tabelle einfügen; markierter Text aus Excel wird zur Tabelle", "tabelle", auswahl => tabelleEinfuegen(auswahl)]
+    ];
+    for (const [text, beschreibung, klasse, aktion] of aktionen) {
+        const neu = document.createElement("button");
+        neu.type = "button";
+        neu.className = klasse;
+        neu.textContent = text;
+        neu.title = beschreibung;
+        neu.setAttribute("aria-label", beschreibung);
+        // Der Fokus bleibt im Textfeld, sonst ginge die Auswahl verloren.
+        neu.addEventListener("mousedown", ereignis => ereignis.preventDefault());
+        neu.addEventListener("click", () => {
+            if (formatFeld?.isConnected) {
+                uebernimm(formatFeld, aktion(auswahlVon(formatFeld)));
+            }
+        });
+        leiste.appendChild(neu);
+    }
+    const hinweis = document.createElement("p");
+    hinweis.className = "hinweis formatleiste-hinweis";
+    hinweis.textContent = "Im Feld steht **fett**, ~~durchgestrichen~~, [rot]farbig[/rot]; Tabellenzeilen beginnen mit „|“. Die Vorschau zeigt das Ergebnis. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle.";
+    leiste.appendChild(hinweis);
+    return leiste;
+}
+
+const formatleiste = baueFormatleiste();
+
+maske.addEventListener("focusin", ereignis => {
+    if (!formatierbar(ereignis.target) || ereignis.target === formatFeld && formatleiste.isConnected) {
+        return;
+    }
+    formatFeld = ereignis.target;
+    (formatFeld.closest("label") ?? formatFeld).after(formatleiste);
+});
+
+maske.addEventListener("keydown", ereignis => {
+    if (formatierbar(ereignis.target) && (ereignis.ctrlKey || ereignis.metaKey) && !ereignis.altKey && ereignis.key.toLowerCase() === "b") {
+        ereignis.preventDefault();
+        uebernimm(ereignis.target, auszeichnen(auswahlVon(ereignis.target), FETT));
+    }
+});
+
+// Zellen aus Excel oder einer anderen Tabelle kommen mit Tabulatoren; ab zwei Zeilen wird daraus eine Tabelle.
+maske.addEventListener("paste", ereignis => {
+    const text = ereignis.clipboardData?.getData("text/plain") ?? "";
+    if (!formatierbar(ereignis.target) || !text.includes("\t") || !text.trimEnd().includes("\n") || !tabelleAusTabulatoren(text)) {
+        return;
+    }
+    ereignis.preventDefault();
+    uebernimm(ereignis.target, tabelleEinfuegen(auswahlVon(ereignis.target), text));
+});
 
 // ---- Vorschau -------------------------------------------------------------------
 
