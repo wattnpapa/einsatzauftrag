@@ -5,6 +5,7 @@ import { ABSCHNITTE, setzeEinsatzauftrag, type EinsatzauftragLogo, type Einsatza
 import { datenAusFragment, dekodiereWerte, istPdf, kodiereWerte, LANGER_LINK, leseAusPdf, linkMitDaten, tausender } from "./austausch.js";
 import { dekodiereCsv, leseCsv, schreibeCsv } from "./csv.js";
 import { auftragKopieren, FELDER, fuehrungText, fuehrungZeilen, hatInhalt, istJa, leseTabelle, naechsterAuftrag, vorlageTabelle, zuDaten, type Feldschluessel, type Tabellenzeile, type Werte } from "./felder.js";
+import { aenderung, auszeichnen, DURCH, FETT, KURSIV, tabelleAusTabulatoren, tabelleEinfuegen, type Auswahl } from "./format.js";
 import { leseLogo } from "./logo.js";
 import { HERKUNFT, dateiname, erzeugePdf } from "./pdf.js";
 import { zeigeSeiten } from "./vorschau.js";
@@ -127,9 +128,11 @@ interface Einstellungen {
     kennung: string;
     organisation: string;
     schrift: "auto" | "10";
+    /** Wie lange der Entwurf auf dem Gerät bleibt: Stunden seit der letzten Änderung, 0 = gar nicht. */
+    entwurfStunden: 0 | 24 | 168;
 }
 
-const einstellungen: Einstellungen = { kennung: "", organisation: "", schrift: "auto", ...lies<Partial<Einstellungen>>(EINSTELLUNGEN) };
+const einstellungen: Einstellungen = { kennung: "", organisation: "", schrift: "auto", entwurfStunden: 24, ...lies<Partial<Einstellungen>>(EINSTELLUNGEN) };
 let logo = lies<EinsatzauftragLogo>(LOGO);
 
 function optionen(): EinsatzauftragOptionen {
@@ -153,11 +156,15 @@ function zeigeEinstellungen(): void {
         ? `Eigenes Logo, ${logo.breite} × ${logo.hoehe} Pixel. Es bleibt nur auf diesem Gerät.`
         : "Kein Logo. Ein eigenes Bild (PNG, JPEG, SVG) bleibt nur auf diesem Gerät.";
     el("logo-entfernen").hidden = !logo;
+    for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="entwurf-frist"]')) {
+        knopf.checked = Number(knopf.value) === einstellungen.entwurfStunden;
+    }
     const teile = [
         einstellungen.kennung.trim() || "Fb Fü 3",
         einstellungen.organisation.trim().replace(/\s*\n\s*/g, " ") || "Technisches Hilfswerk",
         logo ? "mit Logo" : "",
-        einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch"
+        einstellungen.schrift === "10" ? "immer 10 pt" : "Schrift automatisch",
+        einstellungen.entwurfStunden === 0 ? "Entwurf nicht gespeichert" : einstellungen.entwurfStunden === 24 ? "Entwurf 24 Stunden" : "Entwurf 7 Tage"
     ];
     el("einstellungen-stand").textContent = teile.filter(Boolean).join(" · ");
 }
@@ -183,6 +190,19 @@ for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="sch
     knopf.addEventListener("change", () => {
         einstellungen.schrift = knopf.value === "10" ? "10" : "auto";
         einstellungenGeaendert();
+    });
+}
+for (const knopf of document.querySelectorAll<HTMLInputElement>('input[name="entwurf-frist"]')) {
+    knopf.addEventListener("change", () => {
+        const stunden = Number(knopf.value);
+        einstellungen.entwurfStunden = stunden === 0 ? 0 : stunden === 168 ? 168 : 24;
+        einstellungenGeaendert();
+        if (stunden === 0) {
+            merke(ENTWURF, undefined);
+            el("entwurf-stand").textContent = "";
+        } else {
+            geaendert();
+        }
     });
 }
 el<HTMLInputElement>("logo-datei").addEventListener("change", async ereignis => {
@@ -269,7 +289,11 @@ function baueMaske(): void {
     const kopf = karte("Kopf");
     let reihe = zeile(kopf);
     eingabe(reihe, "absender", "Absender", "input", "", "z. B. ZTr TZ OV Oldenburg");
-    eingabe(reihe, "laufendeNummer", "Lfd. Nr.", "input", "schmal").setAttribute("inputmode", "numeric");
+    // Normale Tastatur: die lfd. Nr. darf Buchstaben enthalten („A-09“, „12b“).
+    const nummer = eingabe(reihe, "laufendeNummer", "Lfd. Nr.", "input", "schmal");
+    nummer.setAttribute("inputmode", "text");
+    nummer.setAttribute("autocapitalize", "characters");
+    nummer.setAttribute("autocomplete", "off");
     reihe = zeile(kopf);
     eingabe(reihe, "einsatz", "Für den Einsatz", "input", "", "z. B. Hochwasser Hunte 2026");
     reihe = zeile(kopf);
@@ -405,6 +429,10 @@ function anpassen(feldElement: HTMLTextAreaElement): void {
     feldElement.style.height = `${feldElement.scrollHeight + 2}px`;
 }
 
+function fristText(): string {
+    return einstellungen.entwurfStunden === 168 ? "wird nach 7 Tagen ohne Änderung gelöscht" : "wird nach 24 Stunden ohne Änderung gelöscht";
+}
+
 let entwurfUhr: ReturnType<typeof setTimeout> | undefined;
 
 function geaendert(): void {
@@ -413,9 +441,10 @@ function geaendert(): void {
     clearTimeout(entwurfUhr);
     entwurfUhr = setTimeout(() => {
         const werte = werteDerMaske();
-        merke(ENTWURF, hatInhalt(werte) ? { werte, zeit: Date.now() } : undefined);
-        el("entwurf-stand").textContent = hatInhalt(werte)
-            ? `Entwurf auf diesem Gerät gespeichert, ${uhrzeit()} Uhr.`
+        const speichern = einstellungen.entwurfStunden > 0 && hatInhalt(werte);
+        merke(ENTWURF, speichern ? { werte, zeit: Date.now() } : undefined);
+        el("entwurf-stand").textContent = speichern
+            ? `Entwurf auf diesem Gerät gespeichert, ${uhrzeit()} Uhr, ${fristText()}.`
             : "";
     }, 400);
     vorschauBald();
@@ -456,6 +485,108 @@ maske.addEventListener("keydown", ereignis => {
 });
 maske.addEventListener("focusin", () => {
     tabVerlaesst = false;
+});
+
+// ---- Formatleiste -----------------------------------------------------------------
+
+// Eine Leiste für alle großen Textfelder; sie steht unter dem zuletzt
+// betretenen Feld und bleibt dort, bis ein anderes betreten wird. So rutscht
+// beim Verlassen nichts unter dem Finger weg.
+
+let formatFeld: HTMLTextAreaElement | undefined;
+
+function formatierbar(ziel: EventTarget | null): ziel is HTMLTextAreaElement {
+    return ziel instanceof HTMLTextAreaElement && el("maske-felder").contains(ziel);
+}
+
+/** Ersetzt den Text des Feldes so, dass Rückgängig (Strg+Z) die Änderung zurücknimmt. */
+function uebernimm(feldElement: HTMLTextAreaElement, ergebnis: Auswahl): void {
+    const stueck = aenderung(feldElement.value, ergebnis.wert);
+    feldElement.focus();
+    feldElement.setSelectionRange(stueck.start, stueck.ende);
+    let eingefuegt = false;
+    try {
+        eingefuegt = document.execCommand("insertText", false, stueck.text);
+    } catch {
+        eingefuegt = false;
+    }
+    if (!eingefuegt || feldElement.value !== ergebnis.wert) {
+        feldElement.value = ergebnis.wert;
+        feldElement.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    feldElement.setSelectionRange(ergebnis.start, ergebnis.ende);
+}
+
+function auswahlVon(feldElement: HTMLTextAreaElement): Auswahl {
+    return { wert: feldElement.value, start: feldElement.selectionStart, ende: feldElement.selectionEnd };
+}
+
+function baueFormatleiste(): HTMLElement {
+    const leiste = document.createElement("div");
+    leiste.className = "formatleiste";
+    leiste.setAttribute("role", "toolbar");
+    leiste.setAttribute("aria-label", "Text formatieren");
+    const aktionen: [string, string, string, (auswahl: Auswahl) => Auswahl][] = [
+        ["F", "Fett (Strg+B)", "fett", auswahl => auszeichnen(auswahl, FETT)],
+        ["K", "Kursiv (Strg+I)", "kursiv", auswahl => auszeichnen(auswahl, KURSIV)],
+        ["S", "Durchgestrichen", "durch", auswahl => auszeichnen(auswahl, DURCH)],
+        ["Tabelle", "Tabelle einfügen; markierter Text aus Excel wird zur Tabelle", "tabelle", auswahl => tabelleEinfuegen(auswahl)]
+    ];
+    for (const [text, beschreibung, klasse, aktion] of aktionen) {
+        const neu = document.createElement("button");
+        neu.type = "button";
+        neu.className = klasse;
+        neu.textContent = text;
+        neu.title = beschreibung;
+        neu.setAttribute("aria-label", beschreibung);
+        // Der Fokus bleibt im Textfeld, sonst ginge die Auswahl verloren.
+        neu.addEventListener("mousedown", ereignis => ereignis.preventDefault());
+        neu.addEventListener("click", () => {
+            if (formatFeld?.isConnected) {
+                uebernimm(formatFeld, aktion(auswahlVon(formatFeld)));
+            }
+        });
+        leiste.appendChild(neu);
+    }
+    const hinweis = document.createElement("p");
+    hinweis.className = "hinweis formatleiste-hinweis";
+    hinweis.textContent = "Markdown: **fett**, *kursiv*, ~~durchgestrichen~~, Tabellenzeilen beginnen mit „|“. Die Vorschau zeigt das Ergebnis. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle.";
+    leiste.appendChild(hinweis);
+    return leiste;
+}
+
+const formatleiste = baueFormatleiste();
+
+maske.addEventListener("focusin", ereignis => {
+    if (!formatierbar(ereignis.target) || ereignis.target === formatFeld && formatleiste.isConnected) {
+        return;
+    }
+    formatFeld = ereignis.target;
+    (formatFeld.closest("label") ?? formatFeld).after(formatleiste);
+});
+
+maske.addEventListener("keydown", ereignis => {
+    if (!formatierbar(ereignis.target) || !(ereignis.ctrlKey || ereignis.metaKey) || ereignis.altKey || ereignis.shiftKey) {
+        return;
+    }
+    const art = { b: FETT, i: KURSIV }[ereignis.key.toLowerCase()];
+    if (art) {
+        ereignis.preventDefault();
+        uebernimm(ereignis.target, auszeichnen(auswahlVon(ereignis.target), art));
+    }
+});
+
+// Zellen aus Excel oder einer anderen Tabelle kommen mit Tabulatoren; ab zwei Zeilen wird daraus eine Tabelle.
+// Nur, wenn die Zwischenablage auch eine HTML-Tabelle trägt (Excel, LibreOffice, Word-Tabelle):
+// Fließtext mit Tabstopps aus Word bleibt Text, die Tabulatoren werden zu Tabstopps.
+maske.addEventListener("paste", ereignis => {
+    const text = ereignis.clipboardData?.getData("text/plain") ?? "";
+    const html = ereignis.clipboardData?.getData("text/html") ?? "";
+    if (!formatierbar(ereignis.target) || !/<table[\s>]/i.test(html) || !text.includes("\t") || !text.trimEnd().includes("\n") || !tabelleAusTabulatoren(text)) {
+        return;
+    }
+    ereignis.preventDefault();
+    uebernimm(ereignis.target, tabelleEinfuegen(auswahlVon(ereignis.target), text));
 });
 
 // ---- Vorschau -------------------------------------------------------------------
@@ -566,7 +697,7 @@ async function kopiereLink(link: Promise<string>): Promise<void> {
     const lang = text.length > LANGER_LINK ? " Achtung: Manche Messenger kürzen so lange Links; dann besser die PDF schicken." : "";
     if (kopiert) {
         el("link-ausgabe").hidden = true;
-        kurzmeldung(`Link kopiert, ${tausender(text.length)} Zeichen. Die Daten stecken im Link, kein Server erhält sie.${lang}`, undefined, lang ? 12_000 : 5_000);
+        kurzmeldung(`Link kopiert, ${tausender(text.length)} Zeichen. Er enthält alle Eingaben; gib ihn nur dorthin weiter, wo der Auftrag hin darf.${lang}`, undefined, lang ? 12_000 : 5_000);
         return;
     }
     const feld = el<HTMLInputElement>("link-feld");
@@ -917,9 +1048,17 @@ fuehrungFelder([]);
 zeigeEinstellungen();
 const entwurf = lies<{ werte: Werte; zeit: number }>(ENTWURF);
 if (entwurf?.werte && hatInhalt(entwurf.werte)) {
-    setzeWerte(entwurf.werte);
     const zeit = new Date(entwurf.zeit);
-    el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt.`;
+    const abgelaufen = !(Date.now() - entwurf.zeit < einstellungen.entwurfStunden * 3_600_000);
+    if (abgelaufen) {
+        merke(ENTWURF, undefined);
+        el("entwurf-stand").textContent = einstellungen.entwurfStunden === 0
+            ? "Ein gespeicherter Entwurf wurde gelöscht, weil Entwürfe nicht mehr gespeichert werden."
+            : `Der Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr war älter als ${einstellungen.entwurfStunden === 168 ? "7 Tage" : "24 Stunden"} und wurde gelöscht.`;
+    } else {
+        setzeWerte(entwurf.werte);
+        el("entwurf-stand").textContent = `Entwurf vom ${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}. um ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())} Uhr wiederhergestellt, ${fristText()}.`;
+    }
 }
 vorschauJetzt();
 zeigeVorschauSchalter();

@@ -1,6 +1,7 @@
 import type { jsPDF } from "jspdf";
 import { ABSCHNITTE, type Abschnitt, type EinsatzauftragDaten } from "./daten.js";
-import { fuerPdf, kuerzeAufBreite, umbrechenMitTabs, type Zeile } from "./text.js";
+import { bloecke, GRUNDSTIL, hatAuszeichnung, laeufe, schnitt, umbrechenLaeufe, umbrechenMitTabs, type Block, type Lauf, type TabStueck } from "./format.js";
+import { fuerPdf, kuerzeAufBreite, trenneLangeWoerter } from "./text.js";
 
 // Satz des Einsatzauftrags: rechnet aus, was wohin kommt, und legt es als
 // Liste einfacher Zeichenelemente je Seite ab. Gezeichnet wird erst danach
@@ -28,6 +29,8 @@ export type Element =
         readonly y: number;
         readonly groesse: number;
         readonly fett: boolean;
+        /** Nur vorhanden, wenn kursiv. */
+        readonly kursiv?: true;
         readonly farbe: string;
         readonly ausrichtung: "links" | "mitte" | "rechts";
         readonly breite: number;
@@ -232,17 +235,33 @@ function druckbareDaten(daten: EinsatzauftragDaten): EinsatzauftragDaten {
     return ergebnis;
 }
 
-/** `fuerPdf`, aber Tabulatoren bleiben für den Satz stehen. */
+/** `fuerPdf`, aber Tabulatoren bleiben für die Tabstopps stehen. */
 function druckbar(text: string): string {
     return text.split("\t").map(fuerPdf).join("\t");
+}
+
+/**
+ * Eine gesetzte Zeile einer Zelle: eine Textzeile (Höhe ein Zeilenabstand)
+ * oder eine Zeile einer Tabelle. `zeichne` setzt sie mit Oberkante `oben`.
+ */
+interface Satzzeile {
+    readonly hoehe: number;
+    zeichne(x: number, oben: number): void;
 }
 
 interface Textzeilen {
     /** Kennung in der linken Spalte, z. B. „1a“; leer bei freien Zeilen. */
     kennung: string;
-    zeilen: Zeile[];
+    zeilen: Satzzeile[];
     mindesthoehe: number;
 }
+
+/** Innenabstand der Tabellenzellen waagerecht und senkrecht, Abstand der Tabelle zum Text. */
+const TABELLE_RAND = 1.2;
+const TABELLE_POLSTER = 0.7;
+const TABELLE_ABSTAND = 1;
+const TABELLE_KOPF = "#e6e6e6";
+const TABELLE_SPALTE_MIN = 6;
 
 class Setzer {
     private readonly seiten: Element[][] = [];
@@ -289,15 +308,19 @@ class Setzer {
 
     private text(text: string, x: number, y: number, groesse: number, {
         fett = false,
+        kursiv = false,
         farbe = SCHWARZ,
         ausrichtung = "links"
-    }: { fett?: boolean; farbe?: string; ausrichtung?: "links" | "mitte" | "rechts" } = {}): void {
+    }: { fett?: boolean; kursiv?: boolean; farbe?: string; ausrichtung?: "links" | "mitte" | "rechts" } = {}): void {
         if (!text) {
             return;
         }
-        this.pdf.setFont("helvetica", fett ? "bold" : "normal");
+        this.pdf.setFont("helvetica", schnitt({ fett, kursiv, durch: false }));
         this.pdf.setFontSize(groesse);
-        this.elemente.push({ art: "text", text, x, y, groesse, fett, farbe, ausrichtung, breite: this.pdf.getTextWidth(text) });
+        const breite = this.pdf.getTextWidth(text);
+        this.elemente.push(kursiv
+            ? { art: "text", text, x, y, groesse, fett, kursiv, farbe, ausrichtung, breite }
+            : { art: "text", text, x, y, groesse, fett, farbe, ausrichtung, breite });
     }
 
     /** „ÜBUNG“ diagonal über die Mitte des Formulars, auf jeder Seite gleich. */
@@ -325,20 +348,163 @@ class Setzer {
         this.linie(LINKS, y + DOPPEL, RECHTS, y + DOPPEL, STRICH_FEIN);
     }
 
-    /** Text der Eintragungen umbrechen. */
-    private umbrich(text: string | undefined, breite: number, groesse = this.schrift): Zeile[] {
-        this.pdf.setFont("helvetica", "normal");
-        this.pdf.setFontSize(groesse);
-        return umbrechenMitTabs(this.pdf, text ?? "", breite, TABSTOPP * groesse / 10);
+    /**
+     * Text der Eintragungen umbrechen, mit Markdown-Auszeichnungen (fett,
+     * kursiv, durchgestrichen) und, wenn `tabellen`, mit Tabellen.
+     */
+    private umbrich(text: string | undefined, breite: number, tabellen = false): Satzzeile[] {
+        const ergebnis: Satzzeile[] = [];
+        const liste = bloecke(text ?? "", tabellen);
+        const mitTab = (block: Block | undefined): boolean =>
+            block?.art === "absatz" && block.text.includes("\t") && block.text.trim() !== "";
+        for (let index = 0; index < liste.length; index++) {
+            const block = liste[index] as Block;
+            if (block.art === "tabelle") {
+                ergebnis.push(...this.tabelle(block.zeilen, block.kopfzeilen, breite));
+                continue;
+            }
+            if (mitTab(block)) {
+                // Aufeinanderfolgende Absätze mit Tabulator teilen sich die Tabstopps.
+                const gruppe = [block.text];
+                while (mitTab(liste[index + 1])) {
+                    gruppe.push((liste[++index] as { text: string }).text);
+                }
+                ergebnis.push(...umbrechenMitTabs(this.pdf, gruppe.map(absatz => laeufe(absatz)), breite, this.schrift, TABSTOPP * this.schrift / 10)
+                    .map(zeile => this.tabSatzzeile(zeile)));
+            } else if (block.text.trim() === "") {
+                ergebnis.push(this.textSatzzeile([]));
+            } else if (hatAuszeichnung(block.text)) {
+                ergebnis.push(...umbrechenLaeufe(this.pdf, laeufe(block.text), breite, this.schrift).map(zeile => this.textSatzzeile(zeile)));
+            } else {
+                // Ohne Auszeichnung wie bisher über jsPDF, damit sich nichts verschiebt.
+                this.pdf.setFont("helvetica", "normal");
+                this.pdf.setFontSize(this.schrift);
+                const zeilen = this.pdf.splitTextToSize(trenneLangeWoerter(this.pdf, block.text, breite), breite) as string[];
+                ergebnis.push(...zeilen.map(zeile => this.textSatzzeile(zeile ? [{ ...GRUNDSTIL, text: zeile }] : [])));
+            }
+        }
+        return ergebnis;
     }
 
-    /** Mehrere Zeilen ab der Grundlinie `y` setzen, jedes Stück an seinem Tabstopp. */
-    private zeilen(zeilen: readonly Zeile[], x: number, y: number): void {
-        zeilen.forEach((zeile, index) => {
-            for (const stueck of zeile) {
-                this.text(stueck.text, x + stueck.x, y + index * this.zeile, this.schrift);
+    /** Eine Textzeile mit Tabstopps: jedes Stück an seiner Stelle. */
+    private tabSatzzeile(zeile: readonly TabStueck[]): Satzzeile {
+        return {
+            hoehe: this.zeile,
+            zeichne: (x, oben) => {
+                for (const stueck of zeile) {
+                    this.laeufe(stueck.laeufe, x + stueck.x, oben + oberlaenge(this.schrift));
+                }
             }
+        };
+    }
+
+    /** Eine Textzeile aus Läufen, links beginnend. */
+    private textSatzzeile(zeile: readonly Lauf[]): Satzzeile {
+        return {
+            hoehe: this.zeile,
+            zeichne: (x, oben) => this.laeufe(zeile, x, oben + oberlaenge(this.schrift))
+        };
+    }
+
+    /** Läufe nebeneinander ab `x` auf der Grundlinie `y`; durchgestrichene mit Strich. */
+    private laeufe(zeile: readonly Lauf[], x: number, y: number, groesse = this.schrift): void {
+        // Eine schlichte Zeile geht unverändert hinaus. Sonst stehen die Stücke
+        // ohne Leerzeichen am Rand an ihrer Stelle: Eine Vorschau, die Leerraum
+        // am Rand zusammenfasst, setzt sie so trotzdem richtig.
+        const schlicht = zeile.length === 1 && !(zeile[0] as Lauf).durch;
+        let links = x;
+        for (const lauf of zeile) {
+            this.pdf.setFont("helvetica", schnitt(lauf));
+            this.pdf.setFontSize(groesse);
+            const breite = this.pdf.getTextWidth(lauf.text);
+            const kern = schlicht ? lauf.text : lauf.text.trim();
+            const vorne = schlicht ? 0 : this.pdf.getTextWidth(lauf.text.slice(0, lauf.text.length - lauf.text.trimStart().length));
+            this.text(kern, links + vorne, y, groesse, { fett: lauf.fett, kursiv: lauf.kursiv });
+            if (lauf.durch && kern) {
+                const hoehe = y - groesse * PT * 0.3;
+                const ende = links + vorne + this.pdf.getTextWidth(kern);
+                this.elemente.push({ art: "linie", x1: links + vorne, y1: hoehe, x2: ende, y2: hoehe, staerke: groesse * PT * 0.07 });
+            }
+            links += breite;
+        }
+    }
+
+    /**
+     * Tabelle als Satzzeilen, eine je Tabellenzeile. Die Spalten sind so breit
+     * wie ihr Inhalt; reicht die Breite nicht, bekommen breite Spalten
+     * gleich viel und der Text bricht in der Zelle um.
+     */
+    private tabelle(zeilen: readonly (readonly string[])[], kopfzeilen: number, breite: number): Satzzeile[] {
+        const spalten = Math.max(...zeilen.map(zeile => zeile.length));
+        const inhalt = zeilen.map((zeile, index) => Array.from({ length: spalten }, (_, spalte) =>
+            laeufe(zeile[spalte] ?? "", { ...GRUNDSTIL, fett: index < kopfzeilen })));
+        const natuerlich = Array.from({ length: spalten }, (_, spalte) => Math.max(TABELLE_SPALTE_MIN, ...inhalt.map(zeile =>
+            (zeile[spalte] ?? []).reduce((summe, lauf) => {
+                this.pdf.setFont("helvetica", schnitt(lauf));
+                this.pdf.setFontSize(this.schrift);
+                return summe + this.pdf.getTextWidth(lauf.text.replace(/\s+/g, " "));
+            }, 0) + 2 * TABELLE_RAND)));
+        const breiten = [...natuerlich];
+        if (natuerlich.reduce((a, b) => a + b, 0) > breite) {
+            // Schmale Spalten behalten ihre Breite, die übrigen teilen sich den Rest.
+            const offen = new Set(natuerlich.map((_, spalte) => spalte));
+            let rest = breite;
+            for (let geaendert = true; geaendert && offen.size > 0;) {
+                geaendert = false;
+                const anteil = rest / offen.size;
+                for (const spalte of [...offen]) {
+                    if ((natuerlich[spalte] as number) <= anteil) {
+                        rest -= natuerlich[spalte] as number;
+                        offen.delete(spalte);
+                        geaendert = true;
+                    }
+                }
+            }
+            for (const spalte of offen) {
+                breiten[spalte] = rest / offen.size;
+            }
+        }
+        const gesamt = breiten.reduce((a, b) => a + b, 0);
+        return inhalt.map((zeile, index) => {
+            const umbrochen = zeile.map((lauf, spalte) => umbrechenLaeufe(this.pdf, lauf, (breiten[spalte] as number) - 2 * TABELLE_RAND, this.schrift));
+            const oberer = index === 0 ? TABELLE_ABSTAND : 0;
+            const unterer = index === inhalt.length - 1 ? TABELLE_ABSTAND : 0;
+            const zelle = Math.max(1, ...umbrochen.map(teil => teil.length)) * this.zeile + 2 * TABELLE_POLSTER;
+            return {
+                hoehe: oberer + zelle + unterer,
+                zeichne: (x: number, oben: number) => {
+                    const o = oben + oberer;
+                    const u = o + zelle;
+                    if (index < kopfzeilen) {
+                        this.elemente.push({ art: "flaeche", x, y: o, b: gesamt, h: zelle, farbe: TABELLE_KOPF });
+                    }
+                    this.linie(x, o, x + gesamt, o, STRICH_FEIN);
+                    this.linie(x, u, x + gesamt, u, STRICH_FEIN);
+                    let links = x;
+                    this.linie(links, o, links, u, STRICH_FEIN);
+                    umbrochen.forEach((teil, spalte) => {
+                        teil.forEach((laeufe, nummer) =>
+                            this.laeufe(laeufe, links + TABELLE_RAND, o + TABELLE_POLSTER + oberlaenge(this.schrift) + nummer * this.zeile));
+                        links += breiten[spalte] as number;
+                        this.linie(links, o, links, u, STRICH_FEIN);
+                    });
+                }
+            };
         });
+    }
+
+    /** Satzzeilen untereinander ab der Grundlinie `y` der ersten Textzeile setzen. */
+    private zeilen(zeilen: readonly Satzzeile[], x: number, y: number): void {
+        let oben = y - oberlaenge(this.schrift);
+        for (const zeile of zeilen) {
+            zeile.zeichne(x, oben);
+            oben += zeile.hoehe;
+        }
+    }
+
+    /** Gesamthöhe von Satzzeilen. */
+    private summe(zeilen: readonly Satzzeile[]): number {
+        return zeilen.reduce((summe, zeile) => summe + zeile.hoehe, 0);
     }
 
     /**
@@ -476,12 +642,12 @@ class Setzer {
         if (abschnitt.unterpunkte.length > 0) {
             return abschnitt.unterpunkte.map(punkt => ({
                 kennung: punkt.kennung,
-                zeilen: this.umbrich(this.daten.unterpunkte?.[punkt.kennung], breite),
+                zeilen: this.umbrich(this.daten.unterpunkte?.[punkt.kennung], breite, true),
                 mindesthoehe: ZEILE_MIN
             }));
         }
         if (abschnitt.nummer === 2) {
-            return [{ kennung: "", zeilen: this.umbrich(this.daten.auftrag, breite), mindesthoehe: AUFTRAG_MIN }];
+            return [{ kennung: "", zeilen: this.umbrich(this.daten.auftrag, breite, true), mindesthoehe: AUFTRAG_MIN }];
         }
         // Abschnitt 5: Zeilenumbrüche bleiben in der Zelle wie bei 3c. Als Text
         // beginnt erst eine Leerzeile eine neue Formularzeile; als Liste ist jeder
@@ -494,11 +660,11 @@ class Setzer {
         while (absaetze.length < 2) {
             absaetze.push("");
         }
-        return absaetze.map(absatz => ({ kennung: "", zeilen: this.umbrich(absatz, breite), mindesthoehe: ZEILE_MIN }));
+        return absaetze.map(absatz => ({ kennung: "", zeilen: this.umbrich(absatz, breite, true), mindesthoehe: ZEILE_MIN }));
     }
 
-    private zeilenhoehe(zeilen: number, mindesthoehe: number): number {
-        return Math.max(mindesthoehe, zeilen * this.zeile + 2 * this.polster);
+    private zeilenhoehe(zeilen: readonly Satzzeile[], mindesthoehe: number): number {
+        return Math.max(mindesthoehe, this.summe(zeilen) + 2 * this.polster);
     }
 
     private abschnitt(abschnitt: Abschnitt): void {
@@ -509,7 +675,7 @@ class Setzer {
             const erste = offen[0] as Textzeilen;
             // Kopfzeile nie allein am Seitenende: Mit ihr muss die erste Zeile
             // (oder bei langem Text deren erste zwei Zeilen) noch passen.
-            const mindestens = this.zeilenhoehe(Math.min(2, erste.zeilen.length), erste.mindesthoehe);
+            const mindestens = this.zeilenhoehe(erste.zeilen.slice(0, 2), erste.mindesthoehe);
             if (this.y + DOPPEL + kopf + mindestens + DOPPEL > UNTEN && this.y > OBEN + KOPF_HOEHE + this.abstand + 0.01) {
                 this.neueSeite();
             }
@@ -521,7 +687,7 @@ class Setzer {
             let gesetzt = 0;
             while (offen.length > 0) {
                 const zeile = offen[0] as Textzeilen;
-                const hoehe = this.zeilenhoehe(zeile.zeilen.length, zeile.mindesthoehe);
+                const hoehe = this.zeilenhoehe(zeile.zeilen, zeile.mindesthoehe);
                 if (y + hoehe + DOPPEL <= UNTEN) {
                     this.textzeile(zeile, y);
                     y += hoehe;
@@ -532,11 +698,28 @@ class Setzer {
                 // Zeile passt nicht ganz: teilen, wenn auf dieser Seite noch
                 // mindestens zwei Textzeilen Platz haben (auf einer frischen
                 // Seite auch eine), sonst als Ganzes auf die nächste Seite.
-                const passen = Math.floor((UNTEN - DOPPEL - y - 2 * this.polster) / this.zeile);
+                // Eine Tabellenzeile zählt dabei als eine Zeile und wird nicht geteilt.
+                const frei = UNTEN - DOPPEL - y - 2 * this.polster;
+                let passen = 0;
+                for (let summe = 0; passen < zeile.zeilen.length && summe + (zeile.zeilen[passen] as Satzzeile).hoehe <= frei + 1e-9; passen++) {
+                    summe += (zeile.zeilen[passen] as Satzzeile).hoehe;
+                }
+                // Was nicht einmal auf eine frische Seite passt (eine riesige
+                // Tabellenzeile), steht über, statt endlos weiterzublättern.
+                if (passen === 0 && gesetzt === 0 && oben <= OBEN + KOPF_HOEHE + this.abstand + 0.01) {
+                    if (zeile.zeilen.length <= 1) {
+                        this.textzeile(zeile, y);
+                        y += hoehe;
+                        gesetzt++;
+                        offen.shift();
+                        continue;
+                    }
+                    passen = 1;
+                }
                 const mindestTeil = gesetzt === 0 ? 1 : 2;
                 if (passen >= mindestTeil && zeile.zeilen.length > passen) {
                     const teil = { ...zeile, zeilen: zeile.zeilen.slice(0, passen) };
-                    const teilhoehe = this.zeilenhoehe(passen, 0);
+                    const teilhoehe = this.zeilenhoehe(teil.zeilen, 0);
                     this.textzeile(teil, y);
                     y += teilhoehe;
                     zeile.zeilen = zeile.zeilen.slice(passen);

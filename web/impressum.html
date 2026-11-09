@@ -32,12 +32,12 @@
   <!-- Reichweitenmessung, siehe datenschutz.html Punkt 5. Widerspruch über
        localStorage „skipgc“, den count.js selbst auswertet. -->
   <script>
-    // Erst nach dem Laden einbinden: Antwortet gc.zgo.at nicht, dreht sonst
+    // Erst nach dem Laden einbinden: Antwortet der Zählpunkt nicht, dreht sonst
     // die Ladeanzeige des Browsers weiter, obwohl die Seite längst bereit ist.
     addEventListener("load", function () {
       var zaehler = document.createElement("script");
       zaehler.async = true;
-      zaehler.src = "https://gc.zgo.at/count.js";
+      zaehler.src = "./zaehler.js";
       zaehler.setAttribute("data-goatcounter", "https://einsatzauftrag.goatcounter.com/count");
       document.head.appendChild(zaehler);
     });

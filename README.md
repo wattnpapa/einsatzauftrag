@@ -45,7 +45,31 @@ console.log(satz.seiten.length, satz.schriftgroesse);
 pdf.save("einsatzauftrag.pdf");
 ```
 
-Tabulatoren („\t“) in den mehrzeiligen Feldern setzt der Satz als Tabstopps. Aufeinanderfolgende Zeilen mit Tabulator bilden Spalten: Jede Spalte beginnt für alle diese Zeilen an derselben Stelle, hinter ihrem breitesten Text davor, auf einem Raster von 6,25 mm bei 10 pt, das mit der Schrift mitwächst. Ein Tabulator je Spalte genügt also, und die automatische Schriftgröße verschiebt nichts gegeneinander: `"Übungszeitraum:\t25.10.2024 18:00 Uhr\n\t26.10.2024 08:00 Uhr"` steht bündig. Bricht eine Zeile mit Tabulator um, beginnen die Folgezeilen am letzten Tabstopp; so wird `"•\tTHW OV Hoya\n•\tTHW OV Kiel"` eine Liste mit hängendem Einzug. In der Web-App setzt die Tab-Taste in mehrzeiligen Feldern einen Tabulator, nach Esc springt sie wie gewohnt ins nächste Feld.
+Text in den Eintragungen lässt sich mit Markdown auszeichnen, so wie auf GitHub. Der Text bleibt dabei reiner Text und geht unverändert durch Excel, CSV, Links und die Metadaten der PDF:
+
+| Eingabe | Ergebnis |
+| --- | --- |
+| `**sofort**` oder `__sofort__` | fett |
+| `*Achtung*` oder `_Achtung_` | kursiv |
+| `***Achtung***` | fett und kursiv |
+| `~~Feuerwehrhaus~~` | durchgestrichen |
+| `\*`, `\_`, `\~`, `\|`, `\\` | das Zeichen selbst |
+
+Wie in Markdown beginnt eine Auszeichnung nicht vor und endet nicht nach einem Leerzeichen („5 * 3 * 2“ bleibt stehen), und Unterstriche mitten im Wort wirken nicht („304_OL_THW“ bleibt stehen). Auszeichnungen dürfen ineinander stecken, reichen aber nicht über ein Zeilenende. Farben gibt es in Markdown nicht und deshalb auch hier nicht.
+
+In den Abschnitten 1 bis 5 werden Zeilen, die mit `|` beginnen, zu einer Tabelle. Eine Zeile aus Strichen macht die Zeilen darüber zum grau hinterlegten, fetten Kopf; anders als auf GitHub geht es auch ohne. Die Spalten sind so breit wie ihr Inhalt, reicht der Platz nicht, bricht der Text in der Zelle um. Eine Tabelle darf über eine Seite hinausgehen, geteilt wird nur zwischen ihren Zeilen.
+
+```text
+Kräfte im Bereitstellungsraum:
+| Fahrzeug | Funkrufname |
+| --- | --- |
+| GKW I | Heros Oldenburg 21/52 |
+| MTW | ~~Heros Oldenburg 21/19~~ 21/20 |
+```
+
+In der Web-App erscheint unter dem Textfeld, in dem man gerade schreibt, eine Leiste mit Knöpfen für fett, kursiv, durchgestrichen und eine Tabelle; Strg+B und Strg+I gehen auch. Aus Excel kopierte Zellen werden beim Einfügen zur Tabelle, die erste Zeile zum Kopf.
+
+Tabulatoren („\t“) in den mehrzeiligen Feldern setzt der Satz als Tabstopps. Aufeinanderfolgende Zeilen mit Tabulator bilden Spalten: Jede Spalte beginnt für alle diese Zeilen an derselben Stelle, hinter ihrem breitesten Text davor, auf einem Raster von 6,25 mm bei 10 pt, das mit der Schrift mitwächst. Ein Tabulator je Spalte genügt also, und die automatische Schriftgröße verschiebt nichts gegeneinander: `"Übungszeitraum:\t25.10.2024 18:00 Uhr\n\t26.10.2024 08:00 Uhr"` steht bündig. Bricht eine Zeile mit Tabulator um, beginnen die Folgezeilen am letzten Tabstopp; so wird `"•\tTHW OV Hoya\n•\tTHW OV Kiel"` eine Liste mit hängendem Einzug. In der Web-App setzt die Tab-Taste in mehrzeiligen Feldern einen Tabulator, nach Esc springt sie wie gewohnt ins nächste Feld. Aus Word eingefügter Text behält seine Tabulatoren; zur Tabelle wird Eingefügtes nur, wenn es aus einer Tabelle kommt (Excel, LibreOffice, Word-Tabelle).
 
 In `fuehrung` (Abschnitt 5) beginnt eine Leerzeile eine neue Formularzeile. Sollen Leerzeilen innerhalb einer Formularzeile stehen bleiben, die Zeilen als Liste übergeben: `fuehrung: ["Erreichbarkeiten:\n\nFüSt Rostock", "Führungsstelle Südtor 8"]`.
 
@@ -73,6 +97,11 @@ npm run typecheck
 npm run build        # dist/
 npm run beispiel     # Beispiel-PDFs nach ausgabe/
 ```
+
+## Dokumentation
+
+- [Architektur nach arc42](docs/arc42.md)
+- [Datenschutz-Folgenabschätzung](docs/dsfa.md), Entwurf; offene Punkte stehen in Abschnitt 9
 
 ## Lizenz
 

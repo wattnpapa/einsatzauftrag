@@ -47,6 +47,7 @@ export function seiteAlsSvg(seite: Seite, beschriftung: string): SVGSVGElement {
                     "font-size": teil.groesse * PT,
                     "font-family": "Helvetica, Arial, 'Liberation Sans', sans-serif",
                     "font-weight": teil.fett ? 700 : 400,
+                    "font-style": teil.kursiv ? "italic" : "normal",
                     fill: teil.farbe,
                     "text-anchor": teil.ausrichtung === "links" ? "start" : teil.ausrichtung === "mitte" ? "middle" : "end"
                 });

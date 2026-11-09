@@ -1,4 +1,5 @@
 export { ABSCHNITTE, UNTERPUNKTE, type Abschnitt, type EinsatzauftragDaten, type Unterpunkt } from "./daten.js";
+export { ohneAuszeichnung } from "./format.js";
 export {
     BLATT_BREITE,
     BLATT_HOEHE,

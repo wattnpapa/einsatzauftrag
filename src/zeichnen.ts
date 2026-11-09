@@ -19,7 +19,7 @@ export function zeichneSeite(pdf: jsPDF, seite: Seite): void {
                 pdf.line(element.x1, element.y1, element.x2, element.y2);
                 break;
             case "text":
-                pdf.setFont("helvetica", element.fett ? "bold" : "normal");
+                pdf.setFont("helvetica", element.fett ? (element.kursiv ? "bolditalic" : "bold") : element.kursiv ? "italic" : "normal");
                 pdf.setFontSize(element.groesse);
                 pdf.setTextColor(element.farbe);
                 pdf.text(element.text, element.x, element.y, {

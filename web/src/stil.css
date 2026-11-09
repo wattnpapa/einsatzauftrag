@@ -841,3 +841,11 @@ h1 { overflow-wrap: anywhere; }
 
 table.uebersicht td.mehrseitig { font-weight: 700; color: var(--warn-text); background: var(--warn-fond); }
 .weitere-zeile { margin-top: var(--r-3); }
+
+/* ---- Formatleiste ------------------------------------------------ */
+.formatleiste { display: flex; flex-wrap: wrap; gap: var(--r-1); margin-top: var(--r-1); }
+.formatleiste button { min-width: calc(var(--ziel-basis) + var(--ziel)); padding: 0.3rem 0.6rem; font-size: var(--t-m); }
+.formatleiste button.fett { font-weight: 800; }
+.formatleiste button.kursiv { font-weight: 500; font-style: italic; }
+.formatleiste button.durch { font-weight: 500; text-decoration: line-through; }
+.formatleiste-hinweis { flex-basis: 100%; margin-top: 0; }
