@@ -247,11 +247,14 @@ describe("Abschnitt 5", () => {
         expect(zellen).toHaveLength(2);
     });
 
-    it("hat ohne Text zwei leere Zeilen wie der Vordruck", () => {
-        const mitText = setzeEinsatzauftrag(neuePdf(), { fuehrung: "A\nB" }, { schriftgroesse: 10 }).seiten[0];
-        const leer = setzeEinsatzauftrag(neuePdf(), {}, { schriftgroesse: 10 }).seiten[0];
-        const linien = (seite: Seite | undefined) => (seite?.elemente ?? []).filter(e => e.art === "linie").length;
-        expect(linien(mitText)).toBe(linien(leer));
+    it("hat ohne Text eine leere Zeile, weitere nur mit Text", () => {
+        const linien = (daten: EinsatzauftragDaten) =>
+            (setzeEinsatzauftrag(neuePdf(), daten, { schriftgroesse: 10 }).seiten[0]?.elemente ?? []).filter(e => e.art === "linie").length;
+        const leer = linien({});
+        expect(linien({ fuehrung: "A\nB" })).toBe(leer);
+        expect(linien({ fuehrung: ["A", "", " "] })).toBe(leer);
+        // Eine zweite Zeile bringt eine Trennlinie mehr.
+        expect(linien({ fuehrung: ["A", "B"] })).toBe(leer + 1);
     });
 });
 

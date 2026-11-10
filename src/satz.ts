@@ -652,12 +652,12 @@ class Setzer {
         // Abschnitt 5: Zeilenumbrüche bleiben in der Zelle wie bei 3c. Als Text
         // beginnt erst eine Leerzeile eine neue Formularzeile; als Liste ist jeder
         // Eintrag eine Formularzeile und behält auch seine Leerzeilen.
-        // Mindestens zwei Zeilen wie im Vordruck.
+        // Ohne Text eine leere Zeile; weitere nur, wenn sie Text haben.
         const fuehrung = this.daten.fuehrung ?? "";
         const normal = (text: unknown) => String(text ?? "").replace(/\\n/g, "\n").replace(/\r\n?/g, "\n");
         const roh = Array.isArray(fuehrung) ? fuehrung.map(normal) : normal(fuehrung).split(/\n[ \t]*\n/);
         const absaetze = roh.map(absatz => absatz.replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "").trimEnd()).filter(absatz => absatz.trim() !== "");
-        while (absaetze.length < 2) {
+        if (absaetze.length === 0) {
             absaetze.push("");
         }
         return absaetze.map(absatz => ({ kennung: "", zeilen: this.umbrich(absatz, breite, true), mindesthoehe: ZEILE_MIN }));

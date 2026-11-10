@@ -25,7 +25,7 @@ export interface EinsatzauftragDaten {
      * Abschnitt 5. Zeilenumbrüche bleiben in der Zelle erhalten. Als Text
      * beginnt eine Leerzeile eine neue Formularzeile; als Liste ist jeder
      * Eintrag eine Formularzeile, Leerzeilen darin bleiben stehen.
-     * Mindestens zwei Zeilen wie im Vordruck.
+     * Ohne Text steht eine leere Zeile da, weitere nur mit Text.
      */
     fuehrung?: string | readonly string[];
     ortDatum?: string;

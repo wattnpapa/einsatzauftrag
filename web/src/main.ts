@@ -362,8 +362,8 @@ function knopf(text: string, id: string, beschreibung: string): HTMLButtonElemen
     return neu;
 }
 
-/** Die Eingaben von Abschnitt 5, mindestens zwei wie im Vordruck, oder `anzahl`. */
-function fuehrungFelder(zeilen: readonly string[], anzahl = Math.max(2, zeilen.length)): void {
+/** Die Eingaben von Abschnitt 5: eine, weitere über „Weitere Zeile“, oder `anzahl`. */
+function fuehrungFelder(zeilen: readonly string[], anzahl = Math.max(1, zeilen.length)): void {
     const liste = el("fuehrung-zeilen");
     liste.replaceChildren(...Array.from({ length: anzahl }, (_, index) => {
         const label = document.createElement("label");
